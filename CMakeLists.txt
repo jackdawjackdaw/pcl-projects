@@ -24,6 +24,9 @@ target_link_libraries (pcd_write ${PCL_LIBRARIES})
 add_executable (pcl_cluster cluster_extract.cpp binfile.cpp)
 target_link_libraries (pcl_cluster ${PCL_LIBRARIES})
 
+add_executable (fit_planes fit_planes.cpp binfile.cpp)
+target_link_libraries (fit_planes ${PCL_LIBRARIES})
+
 add_executable (bin2pcd bin2pcd.cpp binfile.cpp)
 target_link_libraries (bin2pcd ${PCL_LIBRARIES})
 
