@@ -1,5 +1,5 @@
 
-//#include "stdio.h"
+#include "stdio.h"
 
 #include <iostream>
 #include <locale>
@@ -17,6 +17,8 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
 
+
+#include "binfile.h"
 
 int main (int argc, char** argv)
 {
@@ -90,9 +92,10 @@ int main (int argc, char** argv)
 
     //std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
     std::stringstream ss;
-    ss << outpath << "/cloud_cluster_" << j << ".pcd";
+    ss << outpath << "/cloud_cluster_" << j << ".cbin";
 		//writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false); //*
-		pcl::io::savePCDFileASCII(ss.str(), *cloud_cluster);
+		//pcl::io::savePCDFileASCII(ss.str(), *cloud_cluster);
+		writeBinfileCCS(cloud_cluster, ss.str());
 		
     j++;
 		exit(1);
