@@ -1,4 +1,5 @@
 
+
 #include "stdio.h"
 
 #include <iostream>
@@ -20,15 +21,16 @@
 
 #include "binfile.h"
 
+
 int main (int argc, char** argv)
 {
-	int width, height;
-	int nPoints;
-	float *pointsX, *pointsY, *pointsZ;
-	float px, py, pz;
+	// int width, height;
+	// int nPoints;
+	// float *pointsX, *pointsY, *pointsZ;
+	// float px, py, pz;
 	
 	if(argc < 2){
-		std::cerr << "# run with: <segfile.pcd> <outpath>\n" << std::endl;
+		std::cerr << "# run with: <segfile.pcd> <outpath>" << std::endl;
 		return EXIT_FAILURE;
 	}
 
@@ -66,12 +68,36 @@ int main (int argc, char** argv)
   pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
   tree->setInputCloud (cloud_filtered);
 
+
+
 	std::cerr << "# carrying out cluster extraction " << std::endl;
   std::vector<pcl::PointIndices> cluster_indices;
   pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-  ec.setClusterTolerance (0.01); // 1cmm seems to work ok (this is slightly a magic param)
+	
+	/**
+	 * these values need to be tuned i fear
+	 * the cluster tolerance should be ~ largest diagonal distance in the cube
+	 * it should be << E[distance_between_cubes] or we'll merge pairs of separate
+	 * objects
+	 * 
+	 * 
+	 * minClusterSize && maxCluster size do exactly what they say, if
+	 * a cube is 2x2x4 and the size of a pixel is pixSize then 
+	 * npixCubeMax = SurfaceArea / pixSize;
+	 * 
+	 * this should be set using the camera resolution and the approximate distance of the 
+	 * camera from the object
+	 * 
+	 */
+	float cubeShortSide = 0.02;
+	float cubeLongSize = 0.04;
+	float cubeSurfaceArea = 2*cubeShortSide*cubeShortSide + 4*cubeLongSize * cubeLongSize;
+	float pixArea = 0.001;
+	int maxCubeCluster = 2000; //cubeSurfaceArea / pixSize; (set by hand right now)
+	
+  ec.setClusterTolerance (0.01); // 1cm seems to work ok (this is slightly a magic param) ?
   ec.setMinClusterSize (50); // 10 is probably too low
-  ec.setMaxClusterSize (5000);
+  ec.setMaxClusterSize (maxCubeCluster); // this may be too high
   ec.setSearchMethod (tree);
   ec.setInputCloud( cloud_filtered);
   ec.extract (cluster_indices);
@@ -84,6 +110,8 @@ int main (int argc, char** argv)
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
   {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+
+
     for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
       cloud_cluster->points.push_back (cloud_filtered->points[*pit]); //*
     cloud_cluster->width = cloud_cluster->points.size ();
@@ -98,6 +126,9 @@ int main (int argc, char** argv)
 		writeBinfileCCS(cloud_cluster, ss.str());
 		
     j++;
+		if(j > 2){
+			exit(1);
+		}
   }
 
   return (0);

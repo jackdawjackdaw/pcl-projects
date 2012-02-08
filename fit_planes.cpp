@@ -117,6 +117,15 @@ void extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string out
     std::cerr << "PointCloud representing the planar component: " << cloudPlane->width * cloudPlane->height << " data points." << std::endl;
 
 
+		// before projection
+		std::cerr << "Cloud before projection: " << std::endl;
+		for (size_t index = 0; index < 10; ++index)
+    std::cerr << "    " << cloudPlane->points[index].x << " " 
+                        << cloudPlane->points[index].y << " " 
+                        << cloudPlane->points[index].z << std::endl;
+
+		// so we project the inliers into the model, this keeps the convex hull planes flat
+		// space or something else?
 		pcl::ProjectInliers<pcl::PointXYZ> proj;
 		proj.setModelType (pcl::SACMODEL_PLANE);
 		proj.setInputCloud (cloudPlane);
@@ -125,6 +134,14 @@ void extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string out
 		std::cerr << "PointCloud after projection has: "
 							<< cloudProjected->points.size () << " data points." << std::endl;
 		// for each plane we want to find the extents in x, y, z
+
+		std::cerr << "Cloud after projection: " << std::endl;
+		for (size_t index = 0; index < 10; ++index)
+    std::cerr << "    " << cloudProjected->points[index].x << " " 
+                        << cloudProjected->points[index].y << " " 
+                        << cloudProjected->points[index].z << std::endl;
+
+
 		// how can we do this?
 		// 
 		// Create a Convex Hull representation of the projected inliers
@@ -142,7 +159,9 @@ void extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string out
 		// std::cerr << ymin << " " << ymax << std::endl;
 		// std::cerr << zmin << " " << zmax << std::endl;
 
-		// need to project points into the model space first then do this
+		// this is wrong so far, should be measuring distance along the plane coords not 
+		// distance in the global coords
+		// 
 		// so we now do a stupid search in the convex hull, this is not going to be many points
 		// so we can extract min and max values (i hope)
 		for(int index = 0; index < cloud_hull->points.size(); index++){
