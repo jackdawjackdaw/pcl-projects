@@ -98,7 +98,6 @@ int main (int argc, char** argv)
 		writeBinfileCCS(cloud_cluster, ss.str());
 		
     j++;
-		exit(1);
   }
 
   return (0);

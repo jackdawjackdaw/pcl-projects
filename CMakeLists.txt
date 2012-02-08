@@ -24,6 +24,13 @@ target_link_libraries (pcd_write ${PCL_LIBRARIES})
 add_executable (pcl_cluster cluster_extract.cpp binfile.cpp)
 target_link_libraries (pcl_cluster ${PCL_LIBRARIES})
 
+add_executable (bin2pcd bin2pcd.cpp binfile.cpp)
+target_link_libraries (bin2pcd ${PCL_LIBRARIES})
+
+add_executable (pcd2bin pcd2bin.cpp binfile.cpp)
+target_link_libraries (pcd2bin ${PCL_LIBRARIES})
+
+
 add_executable (pcl_hull convex_hull.cpp)
 target_link_libraries (pcl_hull ${PCL_LIBRARIES})
 
