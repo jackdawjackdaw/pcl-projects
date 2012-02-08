@@ -1,0 +1,30 @@
+MEADRE
+
+working with openPCL for point cloud segmentation, the workflow is as follows
+
+
+1) obtain point clouds from camera / projector system 
+	 merge and register these clouds (not done yet)
+	 
+2) segment full point cloud into separate clouds each one representing
+	 a cube
+
+3) for each segmented file attempt to figure out the actual cube it represents 
+	 in the world space. There are a variety of putative methods
+	 
+	 a) ransac as many planar models as possible to the point cloud, removing
+	 		inliers each time. Then try and compute the verts / edges of the cube by 
+			figuring out all the 2 / 3 plane interesections from the set
+			(fragile)
+	 b) compare cube methods, generate a substitute cube. Given the camera 
+	 position in the world we can estimate the pitch of a square pixels on the face
+	 (supposing that the cube is head on). Use this to generate another point cloud
+	 representing the subsitute cube. Use ICP or cleverer methods to register
+	 this cloud with the test cloud, this gives the centroid and the orientation.
+	 
+	 
+	 
+			
+			
+			
+	  	
