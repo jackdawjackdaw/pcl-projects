@@ -6,8 +6,14 @@ working with openPCL for point cloud segmentation, the workflow is as follows
 1) obtain point clouds from camera / projector system 
 	 merge and register these clouds (not done yet)
 	 
+	 pcd_write will create a pcd file from a packed binary depth map, this file is
+	 defined as: <I:npts> <I:height> <I:width> npoints*{<f:px> <f:py> <f:pz>}
+	 
 2) segment full point cloud into separate clouds each one representing
 	 a cube
+	 
+	 cloud cluster will read a pcd file and do this arguments are: inputfile outputpath
+	 
 
 3) for each segmented file attempt to figure out the actual cube it represents 
 	 in the world space. There are a variety of putative methods

@@ -2,7 +2,13 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 project(pcd_write)
 
+#set(CMAKE_C_COMPILER "clang")
+#set(CMAKE_CXX_COMPILER "g++")
 
+#set(CMAKE_VERBOSE_MAKEFILE TRUE)
+
+MESSAGE("C Compiler: ${CMAKE_C_COMPILER}")
+MESSAGE("C++ Compiler: ${CMAKE_CXX_COMPILER}")
 
 find_package(PCL 1.2 REQUIRED)
 
