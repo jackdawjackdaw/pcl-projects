@@ -34,6 +34,9 @@ add_executable (pcd2bin pcd2bin.cpp binfile.cpp)
 target_link_libraries (pcd2bin ${PCL_LIBRARIES})
 
 
+add_executable (ransac ransac_cubes.cpp binfile.cpp)
+target_link_libraries (ransac ${PCL_LIBRARIES})
+
 add_executable (pcl_hull convex_hull.cpp)
 target_link_libraries (pcl_hull ${PCL_LIBRARIES})
 
