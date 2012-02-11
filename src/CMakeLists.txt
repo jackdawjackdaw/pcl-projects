@@ -10,7 +10,7 @@ MESSAGE("C Compiler: ${CMAKE_C_COMPILER}")
 MESSAGE("C++ Compiler: ${CMAKE_CXX_COMPILER}")
 
 
-# set(CMAKE_CXX_FLAGS "-m64")
+set(CMAKE_CXX_FLAGS "-Wall -g -pg -fprofile-arcs")
 
 find_package(PCL 1.2 REQUIRED)
 
@@ -40,5 +40,5 @@ target_link_libraries (ransac ${PCL_LIBRARIES})
 add_executable (pcl_hull convex_hull.cpp)
 target_link_libraries (pcl_hull ${PCL_LIBRARIES})
 
-add_executable (test_io test_io.cpp)
-target_link_libraries (test_io ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES})
+#add_executable (test_io test_io.cpp)
+#target_link_libraries (test_io ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES})

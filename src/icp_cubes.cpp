@@ -1,16 +1,12 @@
 #include "stdio.h"
 
 #include <iostream>
-#include <locale>
 #include <string>
 
-#include <pcl/ModelCoefficients.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
-
-#include <pcl/sample_consensus/method_types.h>
-#include <pcl/sample_consensus/model_types.h>
-#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/registration/icp.h>
+#include <pcl/registration/icp_nl.h>
 
 
 #include "binfile.h"
@@ -45,13 +41,29 @@ int main (int argc, char** argv){
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = readBinfileCCS(filepath);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cubeCloud;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr Final (new pcl::PointCloud<pcl::PointXYZ>);
 
 	std::cerr << "# read width: " << cloud->width << std::endl;
 	std::cerr << "# read height: " << cloud->height << std::endl;
 
-	cubeCloud = genTestCube(18,54);
+	std::cerr << "# generating cubeCloud" << std::endl;
+	cubeCloud = genTestCube(18,54); // gen our comparison cube
+	
+	std::cerr << "# starting icp" << std::endl;
+	pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+  icp.setInputCloud(cubeCloud);
+  icp.setInputTarget(cloud);
+	icp.setTransformationEpsilon(1e-6);
+	icp.setMaximumIterations(64);
+	//icp.setMaxCorrespondenceDistance(0.005);
 
-	writeBinfileCCS(cubeCloud, "cubeCloud.cbin");
+  icp.align(*Final);
+  std::cout << "has converged:" << icp.hasConverged() << " score: " <<
+  icp.getFitnessScore() << std::endl;
+  std::cout << icp.getFinalTransformation() << std::endl;
+
+	writeBinfileCCS(Final, outpath);
+
 
 	return EXIT_SUCCESS;
 }
