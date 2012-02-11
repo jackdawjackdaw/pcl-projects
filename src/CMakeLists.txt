@@ -12,10 +12,24 @@ MESSAGE("C++ Compiler: ${CMAKE_CXX_COMPILER}")
 
 set(CMAKE_CXX_FLAGS "-Wall -g -pg -fprofile-arcs")
 
+message("boost include: ${Boost_INCLUDE_DIRS}")
+message("boost lib: ${Boost_LIBRARY_DIRS}")
+
 find_package(PCL 1.2 REQUIRED)
 
-include_directories(${PCL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
-link_directories(${PCL_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
+set(BOOST_ROOT "~/local/boost_1_48_0")
+set(Boost_INCLUDE_DIRS "~/local/boost_1_48_0/")
+set(Boost_LIBRARY_DIRS "~/local/boost_1_48_0/stage/lib")
+											 
+#include_directories(${PCL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+#link_directories(${PCL_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
+
+message("boost include: ${Boost_INCLUDE_DIRS}")
+message("boost lib: ${Boost_LIBRARY_DIRS}")
+message("pcl libs: ${PCL_LIBRARY_DIRS}")
+message("pcl include: ${PCL_INCLUDE_DIRS}")
+
+
 add_definitions(${PCL_DEFINITIONS})
 
 add_executable (pcd_write pcd_write.cpp)
@@ -40,5 +54,7 @@ target_link_libraries (ransac ${PCL_LIBRARIES})
 add_executable (pcl_hull convex_hull.cpp)
 target_link_libraries (pcl_hull ${PCL_LIBRARIES})
 
+add_executable (full_cloud_register full_cloud_register.cpp)
+target_link_libraries (full_cloud_register ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES})							 
 #add_executable (test_io test_io.cpp)
-#target_link_libraries (test_io ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES})
+
