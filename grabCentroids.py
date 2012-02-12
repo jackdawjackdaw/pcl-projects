@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # grab the fourth col of each file and 
-# just print the last bit
+# just print the 3 values
 import os
 
 inpath="./test-data/fitted-cubes/"

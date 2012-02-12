@@ -15,30 +15,21 @@ depends:
 	 
 	 pcd_write will split the given depth image and output them into outpathx
 	 
-	 full_cloud_register: will register the given input files into a single mega cloud		
-	 file, this is done with icp, theres not much needs to be done since the correspondances
-	 are in the same coord system already.
-	 
-	 
 	 
 2) segment full point cloud into separate clouds each one representing
 	 a cube
 	 
 	 cloud cluster will read a pcd file and do this arguments are: inputfile outputpath
-	 
 
 3) for each segmented file attempt to figure out the actual cube it represents 
 	 in the world space. There are a variety of putative methods
-	 
-	 a) fit_planes.cpp ransac as many planar models as possible to the point cloud, removing
-	 		inliers each time. Then try and compute the verts / edges of the cube by 
-			figuring out all the 2 / 3 plane interesections from the set
-			(fragile)
-			this is incomplete and seems likely to be a bit shakey, but in theory
-			shoudl work
 			
-	 b) icp_cubes.cpp: compare cube methods, generate a substitute cube. Using icp the substitue cube is aligned to the test cube obtained from segmentation, this outputs a pcd/cbin file representing the final orientation of the icp alg and also the world transformation matrix. 
+	 icp_cubes.cpp: compare cube methods, generate a substitute cube. Using icp the substitue cube is aligned to the test cube obtained from segmentation, this outputs a pcd/cbin file representing the final orientation of the icp alg and also the world transformation matrix. 
 	 
+3.5) this can be done with fitCubes.py, this will produce a set of pcd files which contain the rotated test cube, these can be  
+		 used for debugging. Rotation matrices are output as transformaiton_<id>.txt files
+
+4) centroids can be extracted from the fourth col of the tranform files with grabCentroids.py
 	 
 	 
 	 
