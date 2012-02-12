@@ -16,7 +16,7 @@ for dirname, dirnames, filenames in os.walk(inpath):
         prefix=filename.rpartition("_")
         f=prefix[2].partition(".")
         index=f[0]
-        print(index)
+        #print(index)
         indexList.append(index)
         cubeFiles.append(os.path.join(dirname, filename))
 
@@ -25,7 +25,7 @@ for fileName in cubeFiles:
     runstring = runBin + " " + fileName + " " + outpath + " " + indexList[index]
     index = index + 1
     print runstring
-    #os.system(runstring) 
+    os.system(runstring) 
 
 
 

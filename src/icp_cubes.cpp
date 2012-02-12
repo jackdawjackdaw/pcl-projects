@@ -1,6 +1,7 @@
 #include "stdio.h"
 
 #include <iostream>
+#include <fstream>
 #include <string>
 
 #include <pcl/io/pcd_io.h>
@@ -8,7 +9,8 @@
 #include <pcl/registration/icp.h>
 #include <pcl/registration/icp_nl.h>
 
-#include "binfile.h"
+// for safe path stuff
+#include <boost/filesystem.hpp>
 
 /**
  * ccs, cec24@phy.duke.edu
@@ -28,19 +30,24 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr genTestCube(int npointsShortSide, int npoint
 
 int main (int argc, char** argv){
 	
-	if(argc < 2) {
+	if(argc < 3) {
 		std::cerr << "# computes transform to rotate a generic cube to a clustered cube " << std::endl;
-		std::cerr << "# run with <binfile.path> <outpath>" << std::endl;
+		std::cerr << "# run with <inputcube..path> <outpath> <id>" << std::endl;
 	}
 	
 	std::string filepath = std::string(argv[1]); 
 	std::string outpath = std::string(argv[2]); 
+	int id = atoi(argv[3]);
 	std::cerr << "# processing: " << filepath << std::endl;
-	std::cerr << "# outputto: " << outpath << std::endl;
+	std::cerr << "# outpath: " << outpath << std::endl;
+	std::cerr << "# id: " << id << std::endl;
 
-	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = readBinfileCCS(filepath);
+	//pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = readBinfileCCS(filepath);
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cubeCloud;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr Final (new pcl::PointCloud<pcl::PointXYZ>);
+
+	pcl::io::loadPCDFile(filepath, *cloud);
 
 	std::cerr << "# read width: " << cloud->width << std::endl;
 	std::cerr << "# read height: " << cloud->height << std::endl;
@@ -60,10 +67,27 @@ int main (int argc, char** argv){
   std::cout << "has converged:" << icp.hasConverged() << " score: " <<
   icp.getFitnessScore() << std::endl;
   std::cout << icp.getFinalTransformation() << std::endl;
+	std::stringstream ss;
+	
+	ss << "fitted_cube_" << id << ".pcd";
+	boost::filesystem::path outPath(outpath); // append the result string to the outpath correctly
+	outPath /= ss.str();
+	std::cerr << "# filename: " << outPath << std::endl;
+	//writeBinfileCCS(Final, outpath);
+	pcl::io::savePCDFileASCII (outPath.native(), *Final);
 
-	writeBinfileCCS(Final, outpath);
-
-
+	std::ofstream file;
+	ss.clear();
+	ss.str("");
+	ss << "transformation_" << id << ".txt";
+	outPath.clear();
+	outPath /= outpath;
+	outPath /= ss.str();
+	std::cerr << "# filename: " << outPath << std::endl;
+	file.open(outPath.c_str());
+	file << icp.getFinalTransformation() << std::endl;
+	file.close();
+	
 	return EXIT_SUCCESS;
 }
 

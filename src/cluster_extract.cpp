@@ -129,11 +129,14 @@ int main (int argc, char** argv)
 		
 		ss.clear();
 		ss.str("");
-		ss << "cloud_cluster_" << j << ".pcd";
+
+		#ifdef DUMPCBIN
+		ss << "cloud_cluster_" << j << ".cbin";
 		outPathFull.clear();
 		outPathFull /= outpath;
 		outPathFull /= ss.str(); // add on the string stream part
 		writeBinfileCCS(cloud_cluster, outPathFull.native());
+		#endif
     j++;
   }
 
