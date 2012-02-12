@@ -8,7 +8,6 @@
 #include <pcl/registration/icp.h>
 #include <pcl/registration/icp_nl.h>
 
-
 #include "binfile.h"
 
 /**

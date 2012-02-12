@@ -10,7 +10,7 @@ MESSAGE("C Compiler: ${CMAKE_C_COMPILER}")
 MESSAGE("C++ Compiler: ${CMAKE_CXX_COMPILER}")
 
 
-set(CMAKE_CXX_FLAGS "-Wall -g -pg -fprofile-arcs -static-libstdc++")
+set(CMAKE_CXX_FLAGS "-Wall -g")
 
 message("cmake c++ flags: ${CMAKE_CXX_FLAGS}")
 
@@ -37,8 +37,8 @@ add_definitions(${PCL_DEFINITIONS})
 add_executable (pcd_write pcd_write.cpp)
 target_link_libraries (pcd_write ${PCL_LIBRARIES})
 
-add_executable (pcl_cluster cluster_extract.cpp binfile.cpp)
-target_link_libraries (pcl_cluster ${PCL_LIBRARIES})
+add_executable (cluster cluster_extract.cpp binfile.cpp)
+target_link_libraries (cluster ${PCL_LIBRARIES})
 
 add_executable (fit_planes fit_planes.cpp binfile.cpp)
 target_link_libraries (fit_planes ${PCL_LIBRARIES})
@@ -49,15 +49,15 @@ target_link_libraries (bin2pcd ${PCL_LIBRARIES})
 add_executable (pcd2bin pcd2bin.cpp binfile.cpp)
 target_link_libraries (pcd2bin ${PCL_LIBRARIES})
 
-
 add_executable (ransac ransac_cubes.cpp binfile.cpp)
 target_link_libraries (ransac ${PCL_LIBRARIES})
 
 add_executable (pcl_hull convex_hull.cpp)
 target_link_libraries (pcl_hull ${PCL_LIBRARIES})
 
-add_executable (full_cloud_register full_cloud_register.cpp)
-target_link_libraries (full_cloud_register ${PCL_COMMON_LIBRARIES} ${PCL_IO_LIBRARIES})							 
+add_executable (full_cloud_register full_cloud_register.cpp binfile.cpp)
+target_link_libraries (full_cloud_register ${PCL_LIBRARIES})							 
+
 add_executable (test_io test_io.cpp)
 target_link_libraries (test_io ${PCL_LIBRARIES})
 

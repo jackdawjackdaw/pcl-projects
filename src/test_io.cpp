@@ -32,7 +32,7 @@ int main (int argc, char** argv){
 	std::cerr << "done" << std::endl;
 
 
-	pcl::io::savePLYFile("test.ply", cloud);	
+	pcl::io::savePCDFile("test.pcd", cloud);	
 	return EXIT_SUCCESS;
 }
 

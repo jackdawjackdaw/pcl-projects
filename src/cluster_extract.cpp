@@ -21,13 +21,20 @@
 
 #include "binfile.h"
 
+#include <boost/filesystem.hpp>
+
+/** 
+ * ccs, cec24@phy.duke.edu
+ * read an input pcd file, filter it and then 
+ * extract euclidean clusters which are 
+ * output as separate pcd files into outpath
+ * 
+ * variables to be tuned: 
+ * minClusterSize && maxClustersize 
+ */
 
 int main (int argc, char** argv)
 {
-	// int width, height;
-	// int nPoints;
-	// float *pointsX, *pointsY, *pointsZ;
-	// float px, py, pz;
 	
 	if(argc < 2){
 		std::cerr << "# run with: <segfile.pcd> <outpath>" << std::endl;
@@ -55,7 +62,7 @@ int main (int argc, char** argv)
 
 	// // ccs, do we need to filter the data, not sure what the downsampling is doing yet
 
-  // // Create the filtering object: downsample the dataset using a leaf size of 1cm
+  // Create the filtering object: downsample the dataset using a leaf size of 1mm
   pcl::VoxelGrid<pcl::PointXYZ> vg;
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
   vg.setInputCloud (cloud);
@@ -63,12 +70,9 @@ int main (int argc, char** argv)
   vg.filter (*cloud_filtered);
   std::cerr << "# PointCloud after filtering has: " << cloud_filtered->points.size ()  << " data points." << std::endl; //*
 
-
   // // Creating the KdTree object for the search method of the extraction
   pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
   tree->setInputCloud (cloud_filtered);
-
-
 
 	std::cerr << "# carrying out cluster extraction " << std::endl;
   std::vector<pcl::PointIndices> cluster_indices;
@@ -104,8 +108,6 @@ int main (int argc, char** argv)
 
 	std::cerr << "# nclusters:  " << cluster_indices.size() << std::endl;
 
-  //pcl::PCDWriter writer;
-
   int j = 0;
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
   {
@@ -120,15 +122,19 @@ int main (int argc, char** argv)
 
     //std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
     std::stringstream ss;
-    ss << outpath << "/cloud_cluster_" << j << ".cbin";
-		//writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false); //*
-		//pcl::io::savePCDFileASCII(ss.str(), *cloud_cluster);
-		writeBinfileCCS(cloud_cluster, ss.str());
+		boost::filesystem::path outPathFull(outpath); // append the result string to the outpath correctly
+    ss << "cloud_cluster_" << j << ".pcd";
+		outPathFull /= ss.str(); // add on the string stream part
+		pcl::io::savePCDFileASCII(outPathFull.native(), *cloud_cluster);
 		
+		ss.clear();
+		ss.str("");
+		ss << "cloud_cluster_" << j << ".pcd";
+		outPathFull.clear();
+		outPathFull /= outpath;
+		outPathFull /= ss.str(); // add on the string stream part
+		writeBinfileCCS(cloud_cluster, outPathFull.native());
     j++;
-		if(j > 2){
-			exit(1);
-		}
   }
 
   return (0);
