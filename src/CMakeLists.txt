@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 project(pcd_write)
 
-set(CMAKE_VERBOSE_MAKEFILE TRUE)
+## this is kind of irritating
+#set(CMAKE_VERBOSE_MAKEFILE TRUE)
 
 set(CMAKE_CXX_COMPILER g++)
 
@@ -10,7 +11,8 @@ MESSAGE("C Compiler: ${CMAKE_C_COMPILER}")
 MESSAGE("C++ Compiler: ${CMAKE_CXX_COMPILER}")
 
 
-set(CMAKE_CXX_FLAGS "-Wall -g")
+## debug flags on 
+set(CMAKE_CXX_FLAGS "-Wall -O0 -g")
 
 message("cmake c++ flags: ${CMAKE_CXX_FLAGS}")
 
@@ -60,4 +62,8 @@ target_link_libraries (full_cloud_register ${PCL_LIBRARIES})
 
 add_executable (test_io test_io.cpp)
 target_link_libraries (test_io ${PCL_LIBRARIES})
+
+add_executable (features features.cpp)
+target_link_libraries (features  ${PCL_LIBRARIES})
+
 

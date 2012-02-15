@@ -20,7 +20,16 @@
 
 #include <pcl/surface/concave_hull.h>
 
+#include <boost/filesystem.hpp>
 
+/**
+ * fit planar models to segemented objects
+ * if we have more than one plane, compute the centroid by finding the common
+ * point +-r/2 from the centre of all the planes
+ *
+ * if we have one plane, then we can guess centroid but can't fix normal direction 
+ * absolutely
+ */
 
 
 #include "binfile.h"
@@ -39,7 +48,13 @@ int main (int argc, char** argv){
 	std::cerr << "# processing: " << filepath << std::endl;
 	std::cerr << "# outputto: " << outpath << std::endl;
 
+#ifdef READCBIN
+	// useful if you're suffering from the boost failures
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = readBinfileCCS(filepath);
+#else 
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::io::loadPCDFile(filepath, *cloud);
+#endif
 
 	std::cerr << "# read width: " << cloud->width << std::endl;
 	std::cerr << "# read height: " << cloud->height << std::endl;
@@ -63,6 +78,9 @@ void extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string out
 	bool shortSideFlag= false;
 	bool workedFlag = false;
 		
+	std::stringstream ss;
+	boost::filesystem::path outPathFull(outpath); // append the result string to the outpath correctly
+
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPlane (new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudWorking (new pcl::PointCloud<pcl::PointXYZ>);	
@@ -71,7 +89,6 @@ void extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string out
 
 	cloudWorking = cloudPtr; // make a copy of the input cloud
 	
-
 	pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
   pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
   // Create the segmentation object
@@ -87,10 +104,18 @@ void extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string out
 	// the filtering object
   pcl::ExtractIndices<pcl::PointXYZ> extract;
 	
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull (new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::ConvexHull<pcl::PointXYZ> chull;
+
+
 	double bigValue = 1E10;
+	
+	std::vector<pcl::PointXYZ> normVec;
+	std::vector<pcl::PointXYZ> centVec;
+	pcl::PointXYZ *p1;
 
 	int i = 0, nr_points = (int) cloudWorking->points.size ();
-  // While 30% of the original cloud is still there
+  // While 10% of the original cloud is still there
   while (cloudWorking->points.size () > 0.1 * nr_points)
   {
     // Segment the largest planar component from the remaining cloud
@@ -107,7 +132,15 @@ void extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string out
 							<< coefficients->values[1] << " "
 							<< coefficients->values[2] << " " 
 							<< coefficients->values[3] << std::endl;
-
+		
+		// store the normal to this plane, this is the coeffs a,b,c
+		// the coeff 4 is the distance of the centre of the plane from the origin?
+		p1 = new pcl::PointXYZ;
+		p1->x = coefficients->values[0];
+		p1->y = coefficients->values[1];
+		p1->z = coefficients->values[2];
+		normVec.push_back(*p1);
+		delete p1;
 
     // Extract the inliers
     extract.setInputCloud (cloudWorking);
@@ -117,12 +150,14 @@ void extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string out
     std::cerr << "PointCloud representing the planar component: " << cloudPlane->width * cloudPlane->height << " data points." << std::endl;
 
 
+		#ifdef DEBUG
 		// before projection
 		std::cerr << "Cloud before projection: " << std::endl;
 		for (size_t index = 0; index < 10; ++index)
     std::cerr << "    " << cloudPlane->points[index].x << " " 
                         << cloudPlane->points[index].y << " " 
                         << cloudPlane->points[index].z << std::endl;
+		#endif
 
 		// so we project the inliers into the model, this keeps the convex hull planes flat
 		// space or something else?
@@ -133,31 +168,32 @@ void extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string out
 		proj.filter (*cloudProjected);
 		std::cerr << "PointCloud after projection has: "
 							<< cloudProjected->points.size () << " data points." << std::endl;
-		// for each plane we want to find the extents in x, y, z
 
+		#ifdef DEBUG
+		// for each plane we want to find the extents in x, y, z
 		std::cerr << "Cloud after projection: " << std::endl;
 		for (size_t index = 0; index < 10; ++index)
     std::cerr << "    " << cloudProjected->points[index].x << " " 
                         << cloudProjected->points[index].y << " " 
                         << cloudProjected->points[index].z << std::endl;
-
+		#endif
 
 		// how can we do this?
 		// 
 		// Create a Convex Hull representation of the projected inliers
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull (new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::ConvexHull<pcl::PointXYZ> chull;
 		chull.setInputCloud (cloudProjected);
-		//chull.setComputeAreaVolume(true);
+		chull.setComputeAreaVolume(true);
+
+		std::cerr << "# chull reconstruction starting\n";
+
 		chull.reconstruct (*cloud_hull);
+
+		std::cerr << "# chull reconstruction done\n";
 		
 		std::cerr << "# chull dim: " << chull.getDim() << std::endl;
-		//std::cerr << "# chull area: " << chull.getTotalArea() << std::endl;
 		std::cerr << "# chull npts: " << cloud_hull->points.size() << std::endl;
+
 		double xmin = bigValue, xmax = -bigValue, ymin = bigValue, ymax= -bigValue, zmin = bigValue , zmax = -bigValue;
-		// std::cerr << xmin << " " << xmax << std::endl;
-		// std::cerr << ymin << " " << ymax << std::endl;
-		// std::cerr << zmin << " " << zmax << std::endl;
 
 		// this is wrong so far, should be measuring distance along the plane coords not 
 		// distance in the global coords
@@ -187,7 +223,7 @@ void extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string out
 		std::cerr << "yrange: " << ymin << " " << ymax << std::endl;
 		std::cerr << "zrange: " << zmin << " " << zmax << std::endl;
 		
-		double dx, dy, dz;
+		double dx, dy, dz, centX, centY, centZ;
 		dx = fabs(xmax-xmin);
 		dy = fabs(ymax-ymin);
 		dz = fabs(zmax-zmin);
@@ -196,42 +232,46 @@ void extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string out
 		std::cerr << "dy: " << dy << std::endl;
 		std::cerr << "dz: " << dz << std::endl;
 		
-		// now we can do something smart with the sides?
-		// we have the normals from the model coeffs and we have the 
-		// extents of that side, so we know roughly the orientation
-		// of the cube and its centroid. Right?
-		// 
-		// 1) if we have 3 (roughly perpendicular) normals then we know that their intersection 
-		// defines the centre of the cube, also they define the rotation of the cube
-		//
-		// 2) if we have 2 normals we can reconstruct the cube from knowing if they 
-		// correspond to short (end caps) or long faces (side panels), right?
-		// 
-		//
-		// 3) if we have 1 normal  (can't really do anything)
-		
-		if( fabs(dz - cubeShortSide) > 1e-2){
-			std::cerr << "found a long side" << std::endl;
-			longSideFlag = true;
-			workedFlag = true;
-		} else if(fabs(dx-cubeShortSide) < 1e-2 && fabs(dz - cubeLongSide) < 1e-2){
-			std::cerr << "found a short side" << std::endl;
-			shortSideFlag = true;
-			workedFlag = true; 
-		} else {
-			std:: cerr << "found a who knows what :(" << std::endl;
-			workedFlag = false;
-		}
-			
+		// find the centre of this plane
+		centX = xmin + dx/2;
+		centY = ymin + dy/2;
+		centZ = zmin + dy/2;
 
-    std::stringstream ss1;
-		ss1 << outpath << "/cloud-plane-hull-extract-" << i << ".cbin" ;
-		writeBinfileCCS(cloud_hull, ss1.str());
-		
+		p1 = new pcl::PointXYZ;
+		p1->x = centX;
+		p1->y = centY;
+		p1->z = centZ;
+		centVec.push_back(*p1);
+		delete p1;
 
-    std::stringstream ss;
+		std::cerr << "centX: " << centX << std::endl;
+		std::cerr << "centY: " << centY << std::endl;
+		std::cerr << "centZ: " << centZ << std::endl;
+
+
+#ifdef WRITECBIN
+		// do the boost song and dance to write the data nicely
+		ss << "cloud-plane-hull-extract-" << i << ".cbin" ;
+		outPathFull.clear();
+		outPathFull /= outpath;
+		outPathFull /= ss.str();;
+		writeBinfileCCS(cloud_hull, outPathFull.native());
+		ss.clear();
+		ss.str("");
 		ss << outpath << "/cloud-plane-extract-" << i << ".cbin" ;
 		writeBinfileCCS(cloudPlane, ss.str());
+#else
+		ss << "cloud-plane-hull-extract-" << i << ".pcd" ;
+		outPathFull.clear();
+		outPathFull /= outpath;
+		outPathFull /= ss.str();;
+		pcl::io::savePCDFileASCII(outPathFull.native(), *cloud_hull);
+		ss.clear();
+		ss.str("");
+		ss << outpath << "/cloud-plane-extract-" << i << ".cbin" ;
+		pcl::io::savePCDFileASCII(outPathFull.native(), *cloudPlane);
+#endif
+		
 
     // Create the filtering object
     extract.setNegative (true);
@@ -239,5 +279,9 @@ void extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string out
     cloudWorking = cloud_f;
     i++;
   }
+
+	// now we should have found normVec.size() planes. 
+	// we need to try and figure out the appropriate normal orientation
+
 }
 

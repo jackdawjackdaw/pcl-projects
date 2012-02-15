@@ -53,15 +53,19 @@ int main (int argc, char** argv){
 	std::cerr << "# read height: " << cloud->height << std::endl;
 
 	std::cerr << "# generating cubeCloud" << std::endl;
-	cubeCloud = genTestCube(18,54); // gen our comparison cube
+	// low res
+	cubeCloud = genTestCube(9,27); // gen our comparison cube
+	// higher res
+	//cubeCloud = genTestCube(18,54); // gen our comparison cube
 	
 	std::cerr << "# starting icp" << std::endl;
 	pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
   icp.setInputCloud(cubeCloud);
   icp.setInputTarget(cloud);
 	icp.setTransformationEpsilon(1e-6);
-	icp.setMaximumIterations(64);
-	//icp.setMaxCorrespondenceDistance(0.005);
+	icp.setMaximumIterations(128);
+	icp.setRANSACOutlierRejectionThreshold(0.01);
+	//icp.setMaxCorrespondenceDistance(0.01);
 
   icp.align(*Final);
   std::cout << "has converged:" << icp.hasConverged() << " score: " <<
@@ -90,6 +94,10 @@ int main (int argc, char** argv){
 	
 	return EXIT_SUCCESS;
 }
+
+
+pcl
+
 
 /**
  * generate a cuboid centered at the origin
@@ -168,17 +176,17 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr genTestCube(int npointsShortSide, int npoint
 	// 4) x = -cubeShortSide/2, z: from - cubeShortSide/2 to cubeShortSide/2, y from: -cubeLongSide/2, to cubeLongSide/2
 
 
-	zval = -cubeShortSide / 2;
-	xOffset = - cubeShortSide / 2;
-	yOffset = - cubeLongSide / 2;
-	for(int i = 0; i < npointsShortSide; i++){
-		for(int j = 0; j < npointsLongSide; j++){
-			cubeCloud->points[counter].x = i*dxShortSide + xOffset;
-			cubeCloud->points[counter].y = j*dxLongSide + yOffset;
-			cubeCloud->points[counter].z = zval;
-			counter++;
-		}
-	}
+	// zval = -cubeShortSide / 2;
+	// xOffset = - cubeShortSide / 2;
+	// yOffset = - cubeLongSide / 2;
+	// for(int i = 0; i < npointsShortSide; i++){
+	// 	for(int j = 0; j < npointsLongSide; j++){
+	// 		cubeCloud->points[counter].x = i*dxShortSide + xOffset;
+	// 		cubeCloud->points[counter].y = j*dxLongSide + yOffset;
+	// 		cubeCloud->points[counter].z = zval;
+	// 		counter++;
+	// 	}
+	// }
 
 	zval = cubeShortSide / 2;
 	xOffset = - cubeShortSide / 2;
@@ -204,17 +212,17 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr genTestCube(int npointsShortSide, int npoint
 		}
 	}
 
-	xval = cubeShortSide / 2;
-	zOffset = - cubeShortSide / 2;
-	yOffset = - cubeLongSide / 2;
-	for(int i = 0; i < npointsShortSide; i++){
-		for(int j = 0; j < npointsLongSide; j++){
-			cubeCloud->points[counter].x = xval;
-			cubeCloud->points[counter].y = j*dxLongSide + yOffset;
-			cubeCloud->points[counter].z = i*dxShortSide + zOffset;
-			counter++;
-		}
-	}
+	// xval = cubeShortSide / 2;
+	// zOffset = - cubeShortSide / 2;
+	// yOffset = - cubeLongSide / 2;
+	// for(int i = 0; i < npointsShortSide; i++){
+	// 	for(int j = 0; j < npointsLongSide; j++){
+	// 		cubeCloud->points[counter].x = xval;
+	// 		cubeCloud->points[counter].y = j*dxLongSide + yOffset;
+	// 		cubeCloud->points[counter].z = i*dxShortSide + zOffset;
+	// 		counter++;
+	// 	}
+	// }
 	
 
 	return cubeCloud;

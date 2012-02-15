@@ -31,6 +31,8 @@
  * 
  * variables to be tuned: 
  * minClusterSize && maxClustersize 
+ * 
+ * may not want to do the filtering, this seems to squash the outliers
  */
 
 int main (int argc, char** argv)
@@ -58,17 +60,21 @@ int main (int argc, char** argv)
 	//pcl::PointCloud<pcl::PointXYZ> cloudIn;
 	pcl::io::loadPCDFile(filename, *cloud);
 
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+
+	if(filterData){
   std::cerr << "# PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl; //*
-
 	// // ccs, do we need to filter the data, not sure what the downsampling is doing yet
-
   // Create the filtering object: downsample the dataset using a leaf size of 1mm
   pcl::VoxelGrid<pcl::PointXYZ> vg;
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
   vg.setInputCloud (cloud);
   vg.setLeafSize (0.001f, 0.001f, 0.001f);
   vg.filter (*cloud_filtered);
   std::cerr << "# PointCloud after filtering has: " << cloud_filtered->points.size ()  << " data points." << std::endl; //*
+	} else{
+		// copy?
+		cloud_filtered = *cloud;
+	}
 
   // // Creating the KdTree object for the search method of the extraction
   pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
@@ -94,12 +100,13 @@ int main (int argc, char** argv)
 	 * 
 	 */
 	float cubeShortSide = 0.02;
-	float cubeLongSize = 0.04;
+	float cubeLongSize = 0.06;
 	float cubeSurfaceArea = 2*cubeShortSide*cubeShortSide + 4*cubeLongSize * cubeLongSize;
 	float pixArea = 0.001;
 	int maxCubeCluster = 2000; //cubeSurfaceArea / pixSize; (set by hand right now)
 	
   ec.setClusterTolerance (0.01); // 1cm seems to work ok (this is slightly a magic param) ?
+	// seems like < 400 is too small for icp to work?
   ec.setMinClusterSize (50); // 10 is probably too low
   ec.setMaxClusterSize (maxCubeCluster); // this may be too high
   ec.setSearchMethod (tree);
@@ -130,7 +137,7 @@ int main (int argc, char** argv)
 		ss.clear();
 		ss.str("");
 
-		#ifdef DUMPCBIN
+		#ifdef WRITECBIN
 		ss << "cloud_cluster_" << j << ".cbin";
 		outPathFull.clear();
 		outPathFull /= outpath;

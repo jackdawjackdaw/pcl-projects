@@ -30,12 +30,15 @@ depends:
 		 used for debugging. Rotation matrices are output as transformaiton_<id>.txt files
 
 4) centroids can be extracted from the fourth col of the tranform files with grabCentroids.py
-	 
-	 
-	 
-	 
-	 
+
+need:
+				a method to figure out which extractions didn't work well
+				estimate min cluster size for successful icp reon
+				well perhaps at get rough-centroid, if not orientation
+				something to fix these bad cubes
+		
+
+notes: 
+			 filtering in segmentation is probably a very bad idea, seem to be losing the outlying points	 
 			
-			
-			
-	  	
+		  
