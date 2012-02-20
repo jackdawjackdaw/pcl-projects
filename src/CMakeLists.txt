@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
-project(pcd_write)
+project(kimichi_clouds)
 
 ## this is kind of irritating
 #set(CMAKE_VERBOSE_MAKEFILE TRUE)
@@ -54,9 +54,6 @@ target_link_libraries (pcd2bin ${PCL_LIBRARIES})
 
 add_executable (icpcubes icp_cubes.cpp binfile.cpp)
 target_link_libraries (icpcubes ${PCL_LIBRARIES})
-
-add_executable (pcl_hull convex_hull.cpp)
-target_link_libraries (pcl_hull ${PCL_LIBRARIES})
 
 add_executable (full_cloud_register full_cloud_register.cpp binfile.cpp)
 target_link_libraries (full_cloud_register ${PCL_LIBRARIES})							 

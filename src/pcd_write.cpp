@@ -17,8 +17,7 @@
  * outputs 4 xyz bin and pcd filesx
  */
 
-int
-  main (int argc, char** argv)
+int main (int argc, char** argv)
 {
   pcl::PointCloud<pcl::PointXYZ> cloud;
 
@@ -113,7 +112,11 @@ int
 	ss << "cloud_full.pcd";
 	boost::filesystem::path outPath(outpathInput); // append the result string to the outpath correctly
 	outPath /= ss.str();
+	#ifdef PCDWRITEBINFILE
+	pcl::io::savePCDFileBinary (outPath.native(), cloud);
+	#else 
 	pcl::io::savePCDFileASCII (outPath.native(), cloud);
+	#endif
 
 	std::cerr << "Saved " << cloud.points.size () << " data points to: " << outPath.native() << std::endl;
 	ss.clear(); // reset the stringstream

@@ -32,7 +32,6 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr readBinfileCCS(std::string filename)
 	int i;
 	int size, width, height;
 	float px, py, pz;
-	float *pointsX, *pointsY, *pointsZ;
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
 	

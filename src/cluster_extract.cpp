@@ -3,11 +3,14 @@
 #include "stdio.h"
 
 #include <iostream>
+#include <fstream>
 #include <locale>
 #include <string>
 
 #include <pcl/ModelCoefficients.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/common/common.h>
+#include <pcl/common/eigen.h>
 #include <pcl/point_types.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/filters/extract_indices.h>
@@ -117,27 +120,49 @@ int main (int argc, char** argv)
 
 	std::cerr << "# nclusters:  " << cluster_indices.size() << std::endl;
 
+
+	std::stringstream ss;
+	boost::filesystem::path outPathFull(outpath); // append the result string to the outpath correctly
+
+	// when you think like a hermit you forget what you know
+	Eigen::Vector4f centroidVec;
+
+	std::ofstream centroidGuessFile;
+	ss << "centroid_pca_guess.txt";
+	outPathFull /= ss.str();
+	centroidGuessFile.open(outPathFull.c_str());
+
+	outPathFull.clear();
+	ss.clear();
+	ss.str("");
+
   int j = 0;
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
   {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
 
 
+		// do a hard copy over the indices
     for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
       cloud_cluster->points.push_back (cloud_filtered->points[*pit]); //*
     cloud_cluster->width = cloud_cluster->points.size ();
     cloud_cluster->height = 1;
     cloud_cluster->is_dense = true;
 
+		// this should presumably go to a file too
+		pcl::compute3DCentroid(*cloud_cluster, centroidVec);
+		std::cout << "# guess centroid: " << centroidVec << std::endl;
+		centroidGuessFile << j << " " << centroidVec.x() << " " << centroidVec.y() << " " << centroidVec.z() << std::endl;
+
     //std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
-    std::stringstream ss;
-		boost::filesystem::path outPathFull(outpath); // append the result string to the outpath correctly
     ss << "cloud_cluster_" << j << ".pcd";
+		outPathFull.clear();
+		outPathFull /= outpath;
 		outPathFull /= ss.str(); // add on the string stream part
 		pcl::io::savePCDFileASCII(outPathFull.native(), *cloud_cluster);
-		
 		ss.clear();
 		ss.str("");
+
 
 		#ifdef WRITECBIN
 		ss << "cloud_cluster_" << j << ".cbin";
@@ -148,6 +173,8 @@ int main (int argc, char** argv)
 		#endif
     j++;
   }
+
+	centroidGuessFile.close();
 
   return (0);
 }
