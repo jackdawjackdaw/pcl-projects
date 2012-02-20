@@ -60,7 +60,9 @@ int main (int argc, char** argv)
 	//pcl::PointCloud<pcl::PointXYZ> cloudIn;
 	pcl::io::loadPCDFile(filename, *cloud);
 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered;// (new pcl::PointCloud<pcl::PointXYZ>);
+
+	bool filterData = false;
 
 	if(filterData){
   std::cerr << "# PointCloud before filtering has: " << cloud->points.size () << " data points." << std::endl; //*
@@ -73,7 +75,7 @@ int main (int argc, char** argv)
   std::cerr << "# PointCloud after filtering has: " << cloud_filtered->points.size ()  << " data points." << std::endl; //*
 	} else{
 		// copy?
-		cloud_filtered = *cloud;
+		cloud_filtered = cloud;
 	}
 
   // // Creating the KdTree object for the search method of the extraction
