@@ -1,27 +1,23 @@
 MEADRE
 
-working with openPCL for point cloud segmentation, the workflow is as follows
+working with openPCL for point cloud segmentation
 
 depends:
 				openPCL
 				boost (for filesystem libs)
 
 
-1) obtain point clouds from camera / projector system 
-	 merge and register these clouds (not done yet)
-	 
-	 pcd_write: creates NCAMERAS pcd files from a binary depth map, this file is
-	 defined as: <I:npts> <I:height> <I:width> npoints*{<f:px> <f:py> <f:pz>}
-	 
-	 pcd_write will split the given depth image and output them into outpathx
-	 
+workflow:
+
+1) obtain point clouds from camera / projector system input file. 
 	 
 2) segment full point cloud into separate clouds each one representing
 	 a cube
 	 
-	 cloud cluster will read a pcd file and do this arguments are: inputfile outputpath
+	 cluster_extract.cpp will read a pcd file and do this arguments are: inputfile outputpath
+	 cloud cluster can output an approximate centroid using the pcl::compute3DCentroid (currently just to stdout)
 
-3) for each segmented file attempt to figure out the actual cube it represents 
+	 3) for each segmented file attempt to figure out the actual cube it represents 
 	 in the world space. There are a variety of putative methods
 			
 	 icp_cubes.cpp: compare cube methods, generate a substitute cube. Using icp the substitue cube is aligned to the test cube obtained from segmentation, this outputs a pcd/cbin file representing the final orientation of the icp alg and also the world transformation matrix. 
@@ -31,14 +27,33 @@ depends:
 
 4) centroids can be extracted from the fourth col of the tranform files with grabCentroids.py
 
+5) wires (in xz coords)  are then estimated from these centroids
+
+file summary:
+				pcd_write -> converts input binfile containing xyz locations of voxels into a pcd file this forms the		
+				basis for the rest of the analysis, the pcd file can be set to binary by defining PCDWRITEBINFILE.
+				input file is expected to be: <int> npoints, <int> height, <int> width, npoints*{float x float y float z}.
+							
+				cluster_extract -> reads a pcdfile and an outpath, pulls out euclidean clusters. Clusters are output to outpath. A text file with centroid guesses computed by: pcl::compute3DCentroid is created.
+				
+				fit_planes -> fits planar models to an extracted cluster, planes are saved to file (for debugging), normals and centroid for the cube or whatever we have of it are extracted. The y rotation mod M_PI is also extracted.
+				
+				pcd2bin -> convert a pcd file to a simple bin file which can be read using the binfile.h routines, useful if you're suffering from boost string problems on os-x 
+				bin2pcd -> convert a bin file back to a pcd file.
+
+				icpcubes -> make a test cube, use icp to register this cube with a supplied cluster file, outputs the 
+				registered test cube and the transformation matrix (in ascii)
+				
+				make_test_cubes -> creates a set of test (partial) cubes and applies rotations around the y axis, 
+				useful to test fit_planes and icpcubes
+
 need:
 				a method to figure out which extractions didn't work well
 				estimate min cluster size for successful icp reon
 				well perhaps at get rough-centroid, if not orientation
 				something to fix these bad cubes
 		
-
 notes: 
-			 filtering in segmentation is probably a very bad idea, seem to be losing the outlying points	 
+			 filtering in segmentation is probably a very bad idea, seem to be losing the outlying poipcnts	 
 			
 		  
