@@ -1,26 +1,115 @@
 
+#include "stdio.h"
+
+#include <iostream>
+#include <locale>
+#include <string>
+
+#include <pcl/ModelCoefficients.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl/common/common.h>
+// need these two to do the rotations 
+#include <pcl/common/eigen.h>
+#include <pcl/common/transforms.h>
+
+#include <boost/filesystem.hpp>
+
+
+void rotateAndOutputCube(std::string outpath, std::string basename, 
+												 pcl::PointCloud<pcl::PointXYZ>::Ptr cubeCloud);
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr genTestCube(int npointsShortSide, int npointsLongSide, int sideArray[6]);
+
+
+/**
+ * ccs, cec24phy.duke.edu
+ * 
+ * make a test cube, and apply a series of 6 rotations to it, saving
+ * each cube into the folder outpath
+ *
+ * this is useful for testing the normal and rotation extraction methods
+ *
+ * 'you're not a good shot but i'm worse'
+ */
+
 int main (int argc, char** argv){
 	
 	if(argc < 1) {
-		std::cerr << "# makes some test cubes for fit_planes.cpp" << std::endl;x
+		std::cerr << "# makes some test cubes for fit_planes.cpp" << std::endl;
 		std::cerr << "# run with <inputcube..path> <outpath> <id>" << std::endl;
 	}
 
 	std::string outpath = std::string(argv[1]); 
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cubeCloud;
+	std::cerr << "# outputto: " << outpath << std::endl;
 
 	std::cerr << "# generating cubeCloud" << std::endl;
-	// low res
-	cubeCloud = genTestCube(9,27); // gen our comparison cube
+
 	
 	// apply a series of rotations and output the cube
 	// then create a cube with only sides no tops
 	// then only tops no sides
 	// then random combinations
 	// etc..
+	int sideArray[6] = {1,1,1,1,1,1};
+	std::cerr << "# sideArray: ";
+	for(int i = 0; i < 6; i ++)
+		std::cerr << i << " ";
+	std::cerr << std::endl;
 	
+	cubeCloud = genTestCube(9, 27, sideArray);
 
+	rotateAndOutputCube(outpath, "full-cube", cubeCloud);
+
+	return EXIT_SUCCESS;
+
+}
+
+
+void rotateAndOutputCube(std::string outpath, std::string basename, 
+												 pcl::PointCloud<pcl::PointXYZ>::Ptr cubeCloud){
+
+	// filesystem safe paths
+	boost::filesystem::path outPathFull(outpath); // append the result string to the outpath correctly
+
+	int nrot = 6;
+	float dtheta = (M_PI / (2*(float)nrot)); // angle increments to rotate by
+	std::stringstream ss;
+	float theta = 0.0;
+	Eigen::Affine3f transMat;
+
+	float translation = 1.0;
+
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cubeRotated  (new pcl::PointCloud<pcl::PointXYZ>);
+	
+	for(int i = 0; i < nrot; i++){
+		theta = (float)i * dtheta;
+
+		std::cerr << "# theta: " << theta << std::endl;
+			
+		ss << basename << "-" << i << "-" << theta << ".pcd";
+		outPathFull /= ss.str();
+
+		std::cerr << "# writing: " << outPathFull.native() << std::endl;
+		
+		// generate the rotation, 
+		transMat = pcl::getTransformation(translation,0.0,0.0, 0.0, theta, 0.0);
+		
+		// apply the rotation
+		pcl::transformPointCloud(*cubeCloud, *cubeRotated, transMat);
+		
+		pcl::io::savePCDFileASCII(outPathFull.native(), *cubeRotated);
+
+		// reset the strings
+		outPathFull.clear();
+		ss.clear();
+		ss.str("");
+		outPathFull /= outpath;
+	}
+	
 }
 
 /**
@@ -149,7 +238,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr genTestCube(int npointsShortSide, int npoint
 		}
 	}
 
-	if(sideArary[5]){
+	if(sideArray[5]){
 		xval = cubeShortSide / 2;
 		zOffset = - cubeShortSide / 2;
 		yOffset = - cubeLongSide / 2;
