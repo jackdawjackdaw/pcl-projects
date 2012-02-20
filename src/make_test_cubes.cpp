@@ -26,9 +26,12 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr genTestCube(int npointsShortSide, int npoint
  * ccs, cec24phy.duke.edu
  * 
  * make a test cube, and apply a series of 6 rotations to it, saving
- * each cube into the folder outpath
+ * each cube into the folder outpath. We only need to rotate up to pi/2 because
+ * our cloud is in S4 / SO(2) right?
  *
  * this is useful for testing the normal and rotation extraction methods
+ *
+ * the cubes are translated to (1.0,0,0)
  *
  * 'you're not a good shot but i'm worse'
  */
@@ -62,6 +65,34 @@ int main (int argc, char** argv){
 	cubeCloud = genTestCube(9, 27, sideArray);
 
 	rotateAndOutputCube(outpath, "full-cube", cubeCloud);
+
+	// now we'll repeat without the horizontal endcaps
+	sideArray[0] = 0;
+	sideArray[1] = 0;
+	cubeCloud = genTestCube(9, 27, sideArray);
+	rotateAndOutputCube(outpath, "no-horizontals", cubeCloud);
+
+	// now repeat with only horizontals
+	sideArray[0] = 1;
+	sideArray[1] = 1;
+	sideArray[2] = 0;
+	sideArray[3] = 0;
+	sideArray[4] = 0;
+	sideArray[5] = 0;
+	cubeCloud = genTestCube(9, 27, sideArray);
+	rotateAndOutputCube(outpath, "no-verticals", cubeCloud);
+
+	// now repeat with a mix
+	sideArray[0] = 1;
+	sideArray[1] = 0;
+	sideArray[2] = 0;
+	sideArray[3] = 1;
+	sideArray[4] = 0;
+	sideArray[5] = 1;
+	cubeCloud = genTestCube(9, 27, sideArray);
+	rotateAndOutputCube(outpath, "mixed-cube", cubeCloud);
+
+	
 
 	return EXIT_SUCCESS;
 

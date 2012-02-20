@@ -6,13 +6,14 @@ project(pcd_write)
 #set(CMAKE_VERBOSE_MAKEFILE TRUE)
 
 set(CMAKE_CXX_COMPILER g++)
+#set(CMAKE_CXX_COMPILER clang++)
 
 MESSAGE("C Compiler: ${CMAKE_C_COMPILER}")
 MESSAGE("C++ Compiler: ${CMAKE_CXX_COMPILER}")
 
 
 ## debug flags on 
-set(CMAKE_CXX_FLAGS "-Wall -O0 -g")
+set(CMAKE_CXX_FLAGS "-Wall -O0 -g -DDEBUG")
 
 message("cmake c++ flags: ${CMAKE_CXX_FLAGS}")
 
@@ -66,4 +67,5 @@ target_link_libraries (test_io ${PCL_LIBRARIES})
 add_executable (features features.cpp)
 target_link_libraries (features  ${PCL_LIBRARIES})
 
-
+add_executable (make_test_cubes make_test_cubes.cpp)
+target_link_libraries (make_test_cubes  ${PCL_LIBRARIES})
