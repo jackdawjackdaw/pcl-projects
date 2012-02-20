@@ -176,17 +176,17 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr genTestCube(int npointsShortSide, int npoint
 	// 4) x = -cubeShortSide/2, z: from - cubeShortSide/2 to cubeShortSide/2, y from: -cubeLongSide/2, to cubeLongSide/2
 
 
-	// zval = -cubeShortSide / 2;
-	// xOffset = - cubeShortSide / 2;
-	// yOffset = - cubeLongSide / 2;
-	// for(int i = 0; i < npointsShortSide; i++){
-	// 	for(int j = 0; j < npointsLongSide; j++){
-	// 		cubeCloud->points[counter].x = i*dxShortSide + xOffset;
-	// 		cubeCloud->points[counter].y = j*dxLongSide + yOffset;
-	// 		cubeCloud->points[counter].z = zval;
-	// 		counter++;
-	// 	}
-	// }
+	zval = -cubeShortSide / 2;
+	xOffset = - cubeShortSide / 2;
+	yOffset = - cubeLongSide / 2;
+	for(int i = 0; i < npointsShortSide; i++){
+		for(int j = 0; j < npointsLongSide; j++){
+			cubeCloud->points[counter].x = i*dxShortSide + xOffset;
+			cubeCloud->points[counter].y = j*dxLongSide + yOffset;
+			cubeCloud->points[counter].z = zval;
+			counter++;
+		}
+	}
 
 	zval = cubeShortSide / 2;
 	xOffset = - cubeShortSide / 2;
@@ -212,17 +212,17 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr genTestCube(int npointsShortSide, int npoint
 		}
 	}
 
-	// xval = cubeShortSide / 2;
-	// zOffset = - cubeShortSide / 2;
-	// yOffset = - cubeLongSide / 2;
-	// for(int i = 0; i < npointsShortSide; i++){
-	// 	for(int j = 0; j < npointsLongSide; j++){
-	// 		cubeCloud->points[counter].x = xval;
-	// 		cubeCloud->points[counter].y = j*dxLongSide + yOffset;
-	// 		cubeCloud->points[counter].z = i*dxShortSide + zOffset;
-	// 		counter++;
-	// 	}
-	// }
+	xval = cubeShortSide / 2;
+	zOffset = - cubeShortSide / 2;
+	yOffset = - cubeLongSide / 2;
+	for(int i = 0; i < npointsShortSide; i++){
+		for(int j = 0; j < npointsLongSide; j++){
+			cubeCloud->points[counter].x = xval;
+			cubeCloud->points[counter].y = j*dxLongSide + yOffset;
+			cubeCloud->points[counter].z = i*dxShortSide + zOffset;
+			counter++;
+		}
+	}
 	
 
 	return cubeCloud;

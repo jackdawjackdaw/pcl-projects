@@ -1,3 +1,4 @@
+
 #include "stdio.h"
 
 #include <iostream>
@@ -500,6 +501,8 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		std::cerr << "# chull npts: " << cloud_hull->points.size() << std::endl;
 
 		double xmin = bigValue, xmax = -bigValue, ymin = bigValue, ymax= -bigValue, zmin = bigValue , zmax = -bigValue;
+
+		// should be using pcl::GetMinMax3d here instead
 
 		// do a stupid search in the convex hull, this is not going to be many points
 		// so we can extract min and max values (i hope)
