@@ -83,7 +83,7 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 float computeDistance(pcl::PointXYZ *p1, pcl::PointXYZ *p2);
 pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planeVec);
 float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec);
-
+float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec);
 
 int main (int argc, char** argv){
 	float cubeShortSide = 0.02;
@@ -130,8 +130,16 @@ int main (int argc, char** argv){
 	pcl::PointXYZ centroid;
 	
 	centroid = guessCentroid(planesVec);
+	
+	float angle;
+	
+	try{
+		angle = computeAngle(centroid, planesVec);
+	} catch (int e) {
+		std::cerr << "computeAngle threw exception no: " << e << std::endl;
+		return EXIT_FAILURE;
+	}
 
-	float angle = computeAngle(centroid, planesVec);
 
 	// cout the results
 	std::cout << centroid << " " << angle << std::endl;
@@ -145,6 +153,11 @@ int main (int argc, char** argv){
  * we need > 2 planes or we can't really tell where the centroid is because we don't 
  * know the normal
  * we can just guess that the normal is outwards and then run back, but it's not obvious
+ *
+ * each consensus pair will sign the normals, changing planesVec. 
+ *
+ * i don't think its possible to have a *sane* situation where there could be multiple
+ * signings of the normals, but i'm not certain yet
  */
 pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planesVec){
 	int nplanes = planesVec.size();
@@ -280,7 +293,10 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 			angleVec.push_back(angleTemp);
 		}
 	}
-	
+
+	if(angleVec.size() == 0){
+		return(computeAngleHoriz(centroid, planesVec));
+	}
 
 	// return the average?
 	// or will the signing be all fucked up?
@@ -303,6 +319,50 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 	//std::cerr << "# angle final: " << angleTemp << std::endl;
 	
 	return(angleTemp);
+}
+
+/**
+ * try and use the edges of the horizontal faces to extract an angle
+ */
+float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec){
+	int nplanes = planesVec.size();
+	std::vector<float> angleVec;
+	float angleTemp = 0.0;
+	float zTemp, xTemp;
+
+	for(int i = 0; i < nplanes; i++){
+		if(planesVec[i].horizontal){
+			// just need to find one point on the edge
+			// this is presumably the point x = xmax, z = zmax?
+			// we really need to test this
+			zTemp = planesVec[i].cloud_hull[0].z;
+			xTemp = planesVec[i].cloud_hull[0].x;
+
+			angleTemp = atan2(zTemp, xTemp);
+			angleVec.push_back(angleTemp);
+		}
+	}
+	
+	if(angleVec.size() == 0){
+		throw 1;
+	}
+	
+	for(int i = 0; i < angleVec.size(); i++){
+		#ifdef DEBUG
+		std::cerr << "# " << fabs(fmod(angleVec[i], M_PI/2)) << std::endl;
+		#endif
+		// we'll just look at the angle mod PI
+		angleTemp += fabs(fmod(angleVec[i], M_PI/2));
+	}
+
+	//std::cerr << "# angle final: " << angleTemp << std::endl;
+
+	angleTemp /= (double)(angleVec.size());
+
+	//std::cerr << "# angle final: " << angleTemp << std::endl;
+	
+	return(angleTemp);
+	
 }
 
 
