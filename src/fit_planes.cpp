@@ -162,7 +162,7 @@ int main (int argc, char** argv){
  */
 pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planesVec){
 	int nplanes = planesVec.size();
-	float guessThreshhold = 1e-3;
+	float guessThreshhold = 5e-3;
 	float distance = 0.0;
 
 
@@ -281,13 +281,16 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 	int nplanes = planesVec.size();
 	std::vector<float> angleVec;
 	float angleTemp = 0.0;
+	float angleFinal = 0.0;
 	float zTemp, xTemp;
+	int meanCount = 0;
 
 	for(int i = 0; i < nplanes; i++){
 		if(planesVec[i].vertical){
 			zTemp = planesVec[i].normal.z * planesVec[i].normalSign;
 			xTemp = planesVec[i].normal.x * planesVec[i].normalSign;
-			angleTemp = atan2(zTemp, xTemp);
+			//angleTemp = atan2(zTemp, xTemp);
+			angleTemp = atan(xTemp/ zTemp);
 			//std::cerr << "# " << planesVec[i].normal << std::endl;
 			//std::cerr << "# " << planesVec[i].normalSign << std::endl;
 			//std::cerr << "# " << zTemp << " " << xTemp << " " << angleTemp << std::endl;
@@ -300,26 +303,40 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 	}
 
 	// return the average?
-	// or will the signing be all fucked up?
 	angleTemp = 0.0;
-	#ifdef DEBUG
+
+#ifdef DEBUG
 	std::cerr << "# angles:\n";
 	#endif
 	for(int i = 0; i < angleVec.size(); i++){
 		#ifdef DEBUG
-		std::cerr << "# " << fabs(fmod(angleVec[i], M_PI/2)) << std::endl;
+		std::cerr << "# " << angleVec[i] << std::endl;
 		#endif
+
+		angleTemp = angleVec[i];
+		if(angleTemp < 0){
+			angleTemp =2 * M_PI + angleTemp;
+		} 
+
+		angleTemp = fmod(angleTemp, M_PI/2);
+		#ifdef DEBUG
+		std::cerr << "# " << angleTemp << std::endl;
+		#endif
+
 		// we'll just look at the angle mod PI
-		angleTemp += fabs(fmod(angleVec[i], M_PI/2));
+		if(!std::isnan(angleTemp)){
+			angleFinal += angleTemp;
+			meanCount++;
+		}
 	}
 
 	//std::cerr << "# angle final: " << angleTemp << std::endl;
 
-	angleTemp /= (double)(angleVec.size());
+	angleFinal /= (double)(meanCount);
 
 	//std::cerr << "# angle final: " << angleTemp << std::endl;
 	
-	return(angleTemp);
+	return(angleFinal);
 }
 
 /**
@@ -375,7 +392,7 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 	float cubeShortSide = 0.02;
 	float cubeLongSide = 0.06; // seems to be 0.06 not 0.04?
 	float distThreshGuess = 0.001; 
-	float cutOffTiny = 1E-3; // how small a dx is small enough to ignore?
+	float cutOffTiny = 9E-3; // how small a dx is small enough to ignore?
 
 	struct planeInfo *tempPlane;
 	std::vector<struct planeInfo> planeInfoVec;
@@ -415,7 +432,7 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 
 	int i = 0, nr_points = (int) cloudWorking->points.size ();
   // While 10% of the original cloud is still there
-  while (cloudWorking->points.size () > 0.1 * nr_points)
+  while (cloudWorking->points.size () > 0)
   {
     // Segment the largest planar component from the remaining cloud
 		seg.setInputCloud (cloudWorking);
@@ -433,6 +450,9 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 							<< coefficients->values[3] << std::endl;
 		
 		tempPlane = new struct planeInfo;
+		tempPlane->horizontal = false;
+		tempPlane->vertical = false;
+		tempPlane->normalSign = 0.0;
 		tempPlane->coeffs[0] = coefficients->values[0];
 		tempPlane->coeffs[1] = coefficients->values[1];
 		tempPlane->coeffs[2] = coefficients->values[2];
@@ -573,14 +593,16 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		// xy || zy planes the radius is cubeShortSide / 2
 		// if its a horizontal plane then it has to be in the xz plane
 		// then the radius is cubeLongSide /2 
-		if(dx > cutOffTiny && dy > cutOffTiny && dz <= cutOffTiny || dz > cutOffTiny && dy > cutOffTiny && dx <= cutOffTiny){
+		if(dy > cutOffTiny && dy > dx && dy > dz){
 			tempPlane->horizontal = false; 
 			tempPlane->vertical = true;
 			tempPlane->radius = cubeShortSide / 2.0;
-		} else if( dx > cutOffTiny && dz > cutOffTiny && dy <= cutOffTiny ){
+			std::cerr << "# vertical\n";
+		} else if( dy < cutOffTiny && dy < dx && dy < dz ){
 			tempPlane->horizontal = true;
 			tempPlane->vertical = false;
 			tempPlane->radius = cubeLongSide / 2.0;
+			std::cerr << "# horizontal\n";
 		} else {
 			tempPlane->horizontal = false;
 			tempPlane->vertical = false;
