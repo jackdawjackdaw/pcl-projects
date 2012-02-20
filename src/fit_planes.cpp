@@ -44,6 +44,8 @@ struct planeInfo{
 	 * the estimated normal of the plane 
 	 * the sign is initially not known */
 	pcl::PointXYZ normal; 
+
+	
 	/**
 	 * the ranges for the x y z extents */
 	double xrange[2];
@@ -63,6 +65,15 @@ struct planeInfo{
 	/**
 	 * the distance of this surface from the centroid (supossedly) */
 	double radius;
+
+	/**
+	 * as far as we can deduce, should the normal be positive or negatively signed
+	 */
+	float normalSign;
+	
+	/**
+	 * the 2d convex hull defining this face*/
+	pcl::PointCloud<pcl::PointXYZ>  cloud_hull;
 	
 };
 
@@ -70,7 +81,8 @@ struct planeInfo{
 
 std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string outpath);
 float computeDistance(pcl::PointXYZ *p1, pcl::PointXYZ *p2);
-pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> planeVec);
+pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planeVec);
+float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec);
 
 
 int main (int argc, char** argv){
@@ -115,9 +127,14 @@ int main (int argc, char** argv){
 		}
 	}
 	
-	guessCentroid(planesVec);
-
+	pcl::PointXYZ centroid;
 	
+	centroid = guessCentroid(planesVec);
+
+	float angle = computeAngle(centroid, planesVec);
+
+	// cout the results
+	std::cout << centroid << " " << angle << std::endl;
 
 	return EXIT_SUCCESS;
 }
@@ -129,7 +146,7 @@ int main (int argc, char** argv){
  * know the normal
  * we can just guess that the normal is outwards and then run back, but it's not obvious
  */
-pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> planesVec){
+pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planesVec){
 	int nplanes = planesVec.size();
 	float guessThreshhold = 1e-3;
 	float distance = 0.0;
@@ -175,13 +192,19 @@ pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> planesVec){
 			
 				distance = computeDistance(p1, p2);
 					
+				#ifdef DEBUG
 				// some debug blurb
-				std::cerr << "# p1 (" << p1->x << "," << p1->y << "," << p1->z << ") p2 (" 
+				std::cerr << "# " << i << "p1 (" << p1->x << "," << p1->y << "," << p1->z << ") " << j << " p2 (" 
 									<< p2->x << "," << p2->y << "," << p2->z  << ") dist: " << distance << std::endl;
+				
+				#endif
 
 				if(distance < guessThreshhold){
 					// push back, p1, p2 or the average?
 					centTryVec.push_back(*p1);
+					// sign the normals and store them
+					planesVec[i].normalSign = (float)radiusCombinations[count][0];
+					planesVec[j].normalSign = (float)radiusCombinations[count][1];
 					delete p1;
 					delete p2;
 					std::cerr << "# won count: " << count << std::endl;
@@ -197,7 +220,8 @@ pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> planesVec){
 	centroid.y = 0;
 	centroid.z = 0;
 
-	std::cerr < "# final centroid candidates:\n";
+
+	std::cerr << "# final centroid candidates:\n";
 	for(int i = 0; i < centTryVec.size(); i++){ // compute the centre of mass (avg) centroid
 		std::cerr << "# " << centTryVec[i] << std::endl;
 		centroid.x += centTryVec[i].x;
@@ -209,6 +233,13 @@ pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> planesVec){
 	centroid.z /= (float)centTryVec.size();
 
 	std::cout << "# centroid: " << centroid << std::endl;
+
+	#ifdef DEBUG
+	std::cerr << "# normal signs: ";
+	for(int i = 0; i < planesVec.size(); i++)
+		std::cerr << planesVec[i].normalSign << " ";
+	std::cerr << std::endl;
+	#endif
 
 	return centroid;
 }
@@ -226,10 +257,52 @@ float computeDistance(pcl::PointXYZ *p1, pcl::PointXYZ *p2){
 /**
  * compute the angle in the yz plane
  * since we know the centroid we can sign the normals for all the (vertical) faces
- * the angle is atan2( normal.y, normal.z)
+ * the angle is atan2( normal.x, normal.z)
+ *
+ * if we only have horizontal faces, we have to use the edges...
+ * 
+ * the angle returned is in the first quadrant, theta in 0..M_PI/2 with the z axis as zero.
  */
-float computeAngle(pcl::PointCloud<pcl::PointXYZ> centroid, std::vector<struct planeInfo> planesVec){
+float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec){
+	int nplanes = planesVec.size();
+	std::vector<float> angleVec;
+	float angleTemp = 0.0;
+	float zTemp, xTemp;
 
+	for(int i = 0; i < nplanes; i++){
+		if(planesVec[i].vertical){
+			zTemp = planesVec[i].normal.z * planesVec[i].normalSign;
+			xTemp = planesVec[i].normal.x * planesVec[i].normalSign;
+			angleTemp = atan2(zTemp, xTemp);
+			//std::cerr << "# " << planesVec[i].normal << std::endl;
+			//std::cerr << "# " << planesVec[i].normalSign << std::endl;
+			//std::cerr << "# " << zTemp << " " << xTemp << " " << angleTemp << std::endl;
+			angleVec.push_back(angleTemp);
+		}
+	}
+	
+
+	// return the average?
+	// or will the signing be all fucked up?
+	angleTemp = 0.0;
+	#ifdef DEBUG
+	std::cerr << "# angles:\n";
+	#endif
+	for(int i = 0; i < angleVec.size(); i++){
+		#ifdef DEBUG
+		std::cerr << "# " << fabs(fmod(angleVec[i], M_PI/2)) << std::endl;
+		#endif
+		// we'll just look at the angle mod PI
+		angleTemp += fabs(fmod(angleVec[i], M_PI/2));
+	}
+
+	//std::cerr << "# angle final: " << angleTemp << std::endl;
+
+	angleTemp /= (double)(angleVec.size());
+
+	//std::cerr << "# angle final: " << angleTemp << std::endl;
+	
+	return(angleTemp);
 }
 
 
@@ -389,18 +462,24 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 
 		}
 
-		std::cerr << "xrange: " << xmin << " " << xmax << std::endl;
-		std::cerr << "yrange: " << ymin << " " << ymax << std::endl;
-		std::cerr << "zrange: " << zmin << " " << zmax << std::endl;
+		tempPlane->cloud_hull = *cloud_hull;
+
+		#ifdef DEBUG
+		std::cerr << "# xrange: " << xmin << " " << xmax << std::endl;
+		std::cerr << "# yrange: " << ymin << " " << ymax << std::endl;
+		std::cerr << "# zrange: " << zmin << " " << zmax << std::endl;
+		#endif
 		
 		double dx, dy, dz, centX, centY, centZ;
 		dx = fabs(xmax-xmin);
 		dy = fabs(ymax-ymin);
 		dz = fabs(zmax-zmin);
 
-		std::cerr << "dx: " << dx << std::endl;
-		std::cerr << "dy: " << dy << std::endl;
-		std::cerr << "dz: " << dz << std::endl;
+		#ifdef DEBUG
+		std::cerr << "# dx: " << dx << std::endl;
+		std::cerr << "# dy: " << dy << std::endl;
+		std::cerr << "# dz: " << dz << std::endl;
+		#endif
 		
 		tempPlane->xrange[0] = xmin;
 		tempPlane->xrange[1] = xmax;
@@ -419,9 +498,12 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		tempPlane->center.y = centY;
 		tempPlane->center.z = centZ;
 
-		std::cerr << "centX: " << centX << std::endl;
-		std::cerr << "centY: " << centY << std::endl;
-		std::cerr << "centZ: " << centZ << std::endl;
+
+		#ifdef DEBUG
+		std::cerr << "# centX: " << centX << std::endl;
+		std::cerr << "# centY: " << centY << std::endl;
+		std::cerr << "# centZ: " << centZ << std::endl;
+		#endif
 		
 		// finally we should determine if its a vertical or horizontal plane
 		// if its vertical then the area should be 2 x 6, and the face will be in either the
@@ -446,7 +528,9 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		planeInfoVec.push_back(*tempPlane);
 		delete tempPlane;
 
+		// save the planes to file, only in debug mode
 
+#ifdef DEBUG
 #ifdef WRITECBIN
 		// do the boost song and dance to write the data nicely
 		ss << "cloud-plane-hull-extract-" << i << ".cbin" ;
@@ -477,6 +561,7 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		outPathFull /= ss.str();
 		std::cerr << "# writing file to: " << outPathFull.native() << std::endl;		
 		pcl::io::savePCDFileASCII(outPathFull.native(), *cloudPlane);
+#endif
 #endif
 
     // Create the filtering object again
