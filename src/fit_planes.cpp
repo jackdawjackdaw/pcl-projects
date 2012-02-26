@@ -31,7 +31,7 @@
  * if we have one plane, then we can guess centroid but can't fix normal direction 
  * absolutely
  *
- * \bug segfaulting currently?
+ * \bug normal assignment is weird for all vert or all horizontal cubes
  */
 
 // holds info about a plane,
@@ -87,12 +87,13 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec);
 
 int main (int argc, char** argv){
-	float cubeShortSide = 0.02;
-	float cubeLongSide = 0.06; // seems to be 0.06 not 0.04?
+	//float cubeShortSide = 0.02;
+	//float cubeLongSide = 0.06; // seems to be 0.06 not 0.04?
 	
-	if(argc < 2) {
+	if(argc < 3) {
 		std::cerr << "# fits planes to a cluster file " << std::endl;
 		std::cerr << "# run with <binfile.path> <outpath>" << std::endl;
+		return EXIT_FAILURE;
 	}
 	
 	std::string filepath = std::string(argv[1]); 
@@ -314,17 +315,17 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 		#endif
 
 		angleTemp = angleVec[i];
-		if(angleTemp < 0){
-			angleTemp =2 * M_PI + angleTemp;
-		} 
+		if(!std::isnan(angleTemp)){
+			if(angleTemp < 0){
+				angleTemp =2 * M_PI + angleTemp;
+			} 
 
-		angleTemp = fmod(angleTemp, M_PI/2);
+			angleTemp = fmod(angleTemp, M_PI/2);
 		#ifdef DEBUG
-		std::cerr << "# " << angleTemp << std::endl;
+			std::cerr << "# " << angleTemp << std::endl;
 		#endif
 
 		// we'll just look at the angle mod PI
-		if(!std::isnan(angleTemp)){
 			angleFinal += angleTemp;
 			meanCount++;
 		}
@@ -393,7 +394,7 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 	float cubeLongSide = 0.06; // seems to be 0.06 not 0.04?
 	float distThreshGuess = 0.001; 
 	float cutOffTiny = 9E-3; // how small a dx is small enough to ignore?
-
+																	 
 	struct planeInfo *tempPlane;
 	std::vector<struct planeInfo> planeInfoVec;
 	planeInfoVec.reserve(6);
@@ -430,7 +431,7 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 	// std::vector<pcl::PointXYZ> centVec;
 	//pcl::PointXYZ *p1;
 
-	int i = 0, nr_points = (int) cloudWorking->points.size ();
+	int i = 0; //nr_points = (int) cloudWorking->points.size ();
   // While 10% of the original cloud is still there
   while (cloudWorking->points.size () > 0)
   {
