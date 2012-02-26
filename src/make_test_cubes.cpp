@@ -38,9 +38,10 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr genTestCube(int npointsShortSide, int npoint
 
 int main (int argc, char** argv){
 	
-	if(argc < 1) {
+	if(argc < 2) {
 		std::cerr << "# makes some test cubes for fit_planes.cpp" << std::endl;
-		std::cerr << "# run with <inputcube..path> <outpath> <id>" << std::endl;
+		std::cerr << "# run with <outpath>" << std::endl;
+		return EXIT_FAILURE;
 	}
 
 	std::string outpath = std::string(argv[1]); 
@@ -59,7 +60,7 @@ int main (int argc, char** argv){
 	int sideArray[6] = {1,1,1,1,1,1};
 	std::cerr << "# sideArray: ";
 	for(int i = 0; i < 6; i ++)
-		std::cerr << i << " ";
+		std::cerr << sideArray[i] << " ";
 	std::cerr << std::endl;
 	
 	cubeCloud = genTestCube(9, 27, sideArray);
@@ -72,6 +73,9 @@ int main (int argc, char** argv){
 	cubeCloud = genTestCube(9, 27, sideArray);
 	rotateAndOutputCube(outpath, "no-horizontals", cubeCloud);
 
+	// reset the cubeCloud?
+	cubeCloud->clear();
+
 	// now repeat with only horizontals
 	sideArray[0] = 1;
 	sideArray[1] = 1;
@@ -81,6 +85,9 @@ int main (int argc, char** argv){
 	sideArray[5] = 0;
 	cubeCloud = genTestCube(9, 27, sideArray);
 	rotateAndOutputCube(outpath, "no-verticals", cubeCloud);
+
+	cubeCloud->clear();
+
 
 	// now repeat with a mix
 	sideArray[0] = 1;
@@ -170,8 +177,20 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr genTestCube(int npointsShortSide, int npoint
 
 	int npointsBottomFace = npointsShortSide* npointsShortSide;
 	int npointsSideFace = npointsShortSide* npointsLongSide;
-	int npointsTotal = 2*npointsBottomFace + 4 *npointsSideFace;
+	int npointsTotal = 0;
 	
+	int nface = 0;
+
+	for(int i = 0; i < 6;i++){
+		if(i < 2){
+			nface = npointsBottomFace;
+		} else {
+			nface = npointsSideFace;
+		}
+		npointsTotal += sideArray[i] * nface;
+	}
+
+
 	float dxShortSide = cubeShortSide / (float)npointsShortSide;
 	float dxLongSide =  cubeLongSide /  (float)npointsLongSide;
 	
