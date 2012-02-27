@@ -1,5 +1,6 @@
 
 #include "stdio.h"
+#include "constants.h"
 
 #include <iostream>
 #include <locale>
@@ -168,11 +169,7 @@ void rotateAndOutputCube(std::string outpath, std::string basename,
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr genTestCube(int npointsShortSide, int npointsLongSide, int sideArray[6]){
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cubeCloud (new pcl::PointCloud<pcl::PointXYZ>);
-	const float cubeShortSide = 0.02;
-  const float cubeLongSide = 0.06; // seems to be 0.06 not 0.04?
 
-	//const float cubeShortSide = 0.2;
-	//const float cubeLongSide = 0.6; // seems to be 0.06 not 0.04?
 
 
 	int npointsBottomFace = npointsShortSide* npointsShortSide;

@@ -1,6 +1,7 @@
 
 
 #include "stdio.h"
+#include "constants.h"
 
 #include <iostream>
 #include <fstream>
@@ -104,10 +105,8 @@ int main (int argc, char** argv)
 	 * camera from the object
 	 * 
 	 */
-	float cubeShortSide = 0.02;
-	float cubeLongSize = 0.06;
-	float cubeSurfaceArea = 2*cubeShortSide*cubeShortSide + 4*cubeLongSize * cubeLongSize;
-	float pixArea = 0.001;
+	//float cubeSurfaceArea = 2*cubeShortSide*cubeShortSide + 4*cubeLongSize * cubeLongSize;
+	//float pixArea = 0.001;
 	int maxCubeCluster = 2000; //cubeSurfaceArea / pixSize; (set by hand right now)
 	
   ec.setClusterTolerance (0.01); // 1cm seems to work ok (this is slightly a magic param) ?

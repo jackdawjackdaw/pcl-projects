@@ -1,6 +1,9 @@
 
 #include "stdio.h"
 
+// get the cub dims
+#include "constants.h"
+
 #include <iostream>
 #include <locale>
 #include <string>
@@ -87,8 +90,6 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec);
 
 int main (int argc, char** argv){
-	//float cubeShortSide = 0.02;
-	//float cubeLongSide = 0.06; // seems to be 0.06 not 0.04?
 	
 	if(argc < 3) {
 		std::cerr << "# fits planes to a cluster file " << std::endl;
@@ -138,7 +139,9 @@ int main (int argc, char** argv){
 	try{
 		angle = computeAngle(centroid, planesVec);
 	} catch (int e) {
-		std::cerr << "computeAngle threw exception no: " << e << std::endl;
+		std::cerr << "computeAngle threw exception " << e << std::endl;
+		// dump the centroid incase its any use
+		std::cerr  << "centroid: " << centroid << std::endl;
 		return EXIT_FAILURE;
 	}
 
@@ -346,7 +349,6 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec){
 	int nplanes = planesVec.size();
 	std::vector<float> angleVec;
-	float cubeShortSide = 0.02;
 
 	float angleTemp = 0.0;
 	float angleFinal = 0.0;
@@ -416,8 +418,6 @@ float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> pl
  * a segmented object
  */
 std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string outpath){
-	float cubeShortSide = 0.02;
-	float cubeLongSide = 0.06; // seems to be 0.06 not 0.04?
 	float distThreshGuess = 0.001; 
 	float cutOffTiny = 9E-3; // how small a dx is small enough to ignore?
 																	 
@@ -451,7 +451,7 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 	// the filtering object
   pcl::ExtractIndices<pcl::PointXYZ> extract;
 	
-	double bigValue = 1E10;
+	float bigValue = 1E6;
 	
 	// std::vector<pcl::PointXYZ> normVec;
 	// std::vector<pcl::PointXYZ> centVec;
@@ -547,7 +547,7 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		std::cerr << "# chull dim: " << chull.getDim() << std::endl;
 		std::cerr << "# chull npts: " << cloud_hull->points.size() << std::endl;
 
-		double xmin = bigValue, xmax = -bigValue, ymin = bigValue, ymax= -bigValue, zmin = bigValue , zmax = -bigValue;
+		float xmin = bigValue, xmax = -bigValue, ymin = bigValue, ymax= -bigValue, zmin = bigValue , zmax = -bigValue;
 
 		// should be using pcl::GetMinMax3d here instead
 
