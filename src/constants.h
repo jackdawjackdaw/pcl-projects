@@ -25,3 +25,7 @@ const int nLongSideLowRes = 27; // high res
 
 const int nShortSideHighRes = 18; // high res
 const int nShortSideLowRes = 9; // high res
+
+const int returnNANCentroid = 5;
+const int returnGuessNormal = 6;
+const int returnNoPlanes = 7;

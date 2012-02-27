@@ -10,7 +10,7 @@
 #include <pcl/point_types.h>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/icp_nl.h>
-#include <pcl/common.h>
+#include <pcl/common/common.h>
 
 // for safe path stuff
 #include <boost/filesystem.hpp>
@@ -111,7 +111,7 @@ int main (int argc, char** argv){
 	outPath.clear();
 	outPath /= outpath; 
 	outPath /= ss.str();
-	file.open(outPath.c_str(), std::ios::app | std::ios:out);
+	file.open(outPath.c_str(), std::ios::app | std::ios::out);
 
 	// get the transmat
 	Eigen::Matrix4f transMat = icp.getFinalTransformation();

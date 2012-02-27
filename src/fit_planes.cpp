@@ -18,6 +18,9 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
 
+#include <pcl/common/common.h>
+#include <pcl/common/centroid.h>
+
 #include <pcl/surface/concave_hull.h>
 
 // for portable filepaths
@@ -56,7 +59,7 @@
 
 std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string outpath);
 float computeDistance(pcl::PointXYZ *p1, pcl::PointXYZ *p2);
-pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planeVec);
+pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planesVec, int &errflag);
 float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec);
 float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec);
 
@@ -104,9 +107,28 @@ int main (int argc, char** argv){
 		}
 	}
 	
+
+	if(planesVec.size() == 0){
+		// didn't find any planes, compute the com and dump that
+		Eigen::Vector4f centroid;
+		pcl::compute3DCentroid(*cloud, centroid);
+		float angle = 0.0;
+
+		boost::filesystem::path outPathFull(outpath); // append the result string to the outpath correctly
+		outPathFull /= "centroids_fit.dat";
+		std::ofstream outfile;
+		// open file, for output, in append mode
+		outfile.open(outPathFull.c_str(), std::ios::out | std::ios::app);
+		outfile << run_index << "  " << centroid[0] << " " << centroid[1] << " " << centroid[2]  << " " << angle << std::endl;
+		outfile.close();
+		return returnNoPlanes;
+
+	}
+	
 	pcl::PointXYZ centroid;
 	
-	centroid = guessCentroid(planesVec);
+	int errflag = 0;
+	centroid = guessCentroid(planesVec, errflag);
 	
 	float angle;
 	
@@ -132,6 +154,17 @@ int main (int argc, char** argv){
 	outfile << run_index << "  " << centroid.x << " " << centroid.y << " " << centroid.z  << " " << angle << std::endl;
 	outfile.close();
 	
+	// check for errors
+	if(std::isnan(centroid.x) || std::isnan(centroid.y) || std::isnan(centroid.z)) {
+		std::cerr << "# nan centroids\n";
+		return returnNANCentroid;
+	}
+
+	if(errflag == returnGuessNormal){
+		std::cerr << "# guessed normal orientation \n";
+		return returnGuessNormal;
+	}
+
 
 	return EXIT_SUCCESS;
 }
@@ -148,16 +181,17 @@ int main (int argc, char** argv){
  * i don't think its possible to have a *sane* situation where there could be multiple
  * signings of the normals, but i'm not certain yet
  */
-pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planesVec){
+pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planesVec, int &errflag)
+{
 	int nplanes = planesVec.size();
-	float guessThreshhold = 5e-3;
+	float guessThreshhold = 1e-2;
 	float distance = 0.0;
 
 
 	pcl::PointXYZ centroid;
 
 	if(nplanes < 2){
-		/**
+ 		/**
 		 * should output some info to an error file here, incase someone wants to revist the fucked up planes
 		 */
 		std::cerr << "# not enough planes to be totally sure, picked positive normal" << std::endl;
@@ -167,6 +201,7 @@ pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planesVec){
 		centroid.z = planesVec[0].center.z - planesVec[0].radius * planesVec[0].normal.z;
 		// might as well give the sign, so we can guess an angle too
 		planesVec[0].normalSign = 1;
+		errflag = returnGuessNormal;
 		return centroid;
 	} 
 
@@ -202,7 +237,7 @@ pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planesVec){
 				#ifdef DEBUG
 				// some debug blurb
 				std::cerr << "# " << i << "p1 (" << p1->x << "," << p1->y << "," << p1->z << ") " << j << " p2 (" 
-									<< p2->x << "," << p2->y << "," << p2->z  << ") dist: " << distance << std::endl;
+									<< p2->x << "," << p2->y << "," << p2->z  << ") dist: " << distance << " " << count << std::endl;
 				
 				#endif
 
@@ -683,6 +718,42 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 	// we need to try and figure out the appropriate normal orientation
 	int nplanes = planeInfoVec.size();
 	std::cout << "# nplanes: " << nplanes << std::endl;
+
+	// finally, we go through and check dims of each vertical plane, if there's one thats
+	// very small in the y direction we'll assign its y center to that of its brothers that are ok
+	double dy;
+	int *badCents = new int[nplanes]; // (if 0 then this plane has a good cent, otherwise -1)
+	float goodCentYV = 0.0;
+	int goodCentCount = 0;
+	for(int i = 0; i < nplanes; i++){
+		if(planeInfoVec[i].vertical){
+			dy = planeInfoVec[i].yrange[1] - planeInfoVec[i].yrange[0];
+			if(fabs(dy - cubeLongSide)/cubeLongSide > 1E-1){ // more than 10% off but it IS a vertical side
+				badCents[i] = 1;
+				std::cerr << "# bad cent index: " << i << " dy: " << dy << std::endl;
+			} else {
+				badCents[i] = 0;
+				goodCentYV += planeInfoVec[i].center.y;
+				goodCentCount++;
+			}
+		}
+	}
+
+	// if we actually found one that's ok
+	if(goodCentCount > 0){
+		goodCentYV /= (float)(goodCentCount);
+		std::cerr << "# good cent value: " << goodCentYV << std::endl;
+
+	// 2nd pass, now correct the planes with the bad Y-cents
+		for(int i = 0; i < nplanes; i++){
+			if(badCents[i] == 1){
+				planeInfoVec[i].center.y = goodCentYV;
+			}
+		}
+	}
+		
+
+	delete [] badCents;
 	
 	return planeInfoVec;
 }
