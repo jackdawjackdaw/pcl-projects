@@ -3,15 +3,14 @@
 ## fit cubes run this to actually do the dirty on a set of cluster files
 ## either uses icp or fit_planes
 
-## clearly these paths are ALL fucked up if you're on windows...
 import os
+import re
 import sys
 import subprocess
 inpath=""
 outpath=""
 runBin=""
-#runBinICP="./build/src/icpcubes"
-#runBinFitPlanes="./build/src/fit_planes"
+
 runBinICP= os.path.join(".", "build" , "src", "icpcubes")
 runBinFitPlanes = os.path.join(".", "build", "src", "fit_planes")
 
@@ -27,12 +26,15 @@ if (len(sys.argv) < 4):
 inpath = sys.argv[1]
 outpath = sys.argv[2]
 
+usingFitPlanes = 0
+
 if(sys.argv[3] == "1"):
     runBin = runBinICP
     print "# using icp " + runBin
 else:
     runBin = runBinFitPlanes
     print "# using fitplanes " + runBin
+    usingFitPlanes = 1
 
 ## check that the bin we want to use exists (durp)
 if (os.path.isfile(runBin) == False):
@@ -48,23 +50,27 @@ indexList = []
 
 for dirname, dirnames, filenames in os.walk(inpath):
     for filename in filenames:
-        #print os.path.join(dirname, filename)
-        # ugly partitioning
-        prefix=filename.rpartition("_")
-        f=prefix[2].partition(".")
-        index=f[0]
-        #print(index)
-        indexList.append(index)
-        cubeFiles.append(os.path.join(dirname, filename))
+        #print(filename)
+        name, extension = os.path.splitext(filename)
+        if(extension == '.pcd'): 
+            prefix=filename.rpartition("_")
+            f=prefix[2].partition(".")
+            index=f[0]
+            indexList.append(index)
+            cubeFiles.append(os.path.join(dirname, filename))
 
 index = 0
 
 nanNormalsList = []
 guessNormalsList = []
+unknownList = []
 
 ## return values for when things fuck up
 nanNormalsRet = 5
 guessNormalsRet = 6
+
+## how many files to process before stopping (for debuggin)
+#nProcessStop = 256
 
 for fileName in cubeFiles:
     runArgs= []
@@ -78,7 +84,7 @@ for fileName in cubeFiles:
     try: 
         subprocess.check_call(runArgs)
     except subprocess.CalledProcessError, e:
-        print "called process error",  e.returncode
+        print "# called process error",  e.returncode
         if(e.returncode == nanNormalsRet): # this is a nan normal
             print "# nan normals"
             nanNormalsList.append(runArgs)
@@ -87,26 +93,35 @@ for fileName in cubeFiles:
             guessNormalsList.append(runArgs)
         else: 
             print "# unknown retcode: ", e.returncode
-            sys.exit(-1)
+            runArgs.append(e.returncode)
+            unknownList.append(runArgs)
     except:
         print "unhandled error caught"
         sys.exit(-1)
         
-    if(index > 5):
-        break
+    #if(index > nProcessStop):
+    #    break
 
-
+## 
+if(usingFitPlanes):
 ## now print out the bad and guess info to log files
-nanFile = open("./fitcubes-nanlist.txt", 'w')
-for line in nanNormalsList:
-    print line
-    nanFile.write(line[3] +  " " + line[1] + "\n")
-nanFile.close()
+    if len(nanNormalsList):
+        nanFile = open(os.path.join(outpath, "fitCubes-nanlist.txt"), 'w')
+        nanFile.write("# these clusters failed\n")
+        for line in nanNormalsList:
+            nanFile.write(line[3] +  " " + line[1] + "\n")
+        nanFile.close()
 
-guessFile = open("./fitcubes-guesslist.txt", 'w')
-for line in guessNormalsList:
-    guessFile.write(line[3] +  " " + line[1] + "\n")
-guessFile.close()
+    if len(guessNormalsList):
+        guessFile = open(os.path.join(outpath, "fitCubes-guesslist.txt"), 'w')
+        guessFile.write("# these clusters have apparently only 1 face\n")
+        for line in guessNormalsList:
+            guessFile.write(line[3] +  " " + line[1] + "\n")
+        guessFile.close()
 
-
-
+    if len(unknownList):
+        ukFile = open(os.path.join(outpath, "fitCubes-unknown.txt"), 'w')
+        ukFile.write("# these clusters wtf'd, 3rd col is retcode\n")
+        for line in unknownList:
+            ukFile.write(line[3] +  " " + line[1] + " " + str(line[4]) +  "\n")
+        ukFile.close()
