@@ -17,17 +17,9 @@ workflow:
 	 cluster_extract.cpp will read a pcd file and do this arguments are: inputfile outputpath
 	 cloud cluster can output an approximate centroid using the pcl::compute3DCentroid (currently just to stdout)
 
-	 3) for each segmented file attempt to figure out the actual cube it represents 
-	 in the world space. There are a variety of putative methods
-			
-	 icp_cubes.cpp: compare cube methods, generate a substitute cube. Using icp the substitue cube is aligned to the test cube obtained from segmentation, this outputs a pcd/cbin file representing the final orientation of the icp alg and also the world transformation matrix. 
-	 
-3.5) this can be done with fitCubes.py, this will produce a set of pcd files which contain the rotated test cube, these can be  
-		 used for debugging. Rotation matrices are output as transformaiton_<id>.txt files
+3) run fitCubes on clusters
 
-4) centroids can be extracted from the fourth col of the tranform files with grabCentroids.py
-
-5) wires (in xz coords)  are then estimated from these centroids
+4) profit
 
 file summary:
 		pcd_write -> converts input binfile containing xyz locations of voxels into a pcd file this forms the		
