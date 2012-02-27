@@ -1,9 +1,5 @@
 
 #include "stdio.h"
-
-// get the cub dims
-#include "constants.h"
-
 #include <iostream>
 #include <locale>
 #include <string>
@@ -24,62 +20,37 @@
 
 #include <pcl/surface/concave_hull.h>
 
+// for portable filepaths
 #include <boost/filesystem.hpp>
 
+// get the cube dims and other constants
+#include "constants.h"
+// defines a plane, used a lot here
+#include "planeinfo.h"
+
 /**
+ * ccs, cec24@phy.duke.edu
+ * fit_planes.cpp -> extract centroids and y-axis angles
+ * 
+ * summary: 
  * fit planar models to segemented objects
  * if we have more than one plane, compute the centroid by finding the common
  * point +-r/2 from the centre of all the planes
  *
  * if we have one plane, then we can guess centroid but can't fix normal direction 
- * absolutely
+ * but we can still guess the angle, if its horizontal
  *
- * \bug normal assignment is weird for all vert or all horizontal cubes
+ * 
+ * usage: 
+ * arg1 <- (string) pcd cluster file (putative cube) 
+ * arg2 <- (string) output-path, centroids+angles file gets written here, 
+ * also diagnostic pcd files are spewed all over in #ifdef DEBUG
+ * arg3 <- (int) cluster-index, index of cluster, used to tag the centroid + angle
+ * 
+ * on return:
+ * the file centroids_fit.dat in output-path will have a line: index centroid.x centroid.y centroid.z angle appended to it
+ * 
  */
-
-// holds info about a plane,
-// particularly: the centre, the x,y,z ranges, if its a vertical (long side) or horizontal plane
-// estimated normals
-struct planeInfo{
-	/** 
-	 * the estimated centre of the plane */
-	pcl::PointXYZ center;
-	/**
-	 * the estimated normal of the plane 
-	 * the sign is initially not known */
-	pcl::PointXYZ normal; 
-
-	
-	/**
-	 * the ranges for the x y z extents */
-	double xrange[2];
-	double yrange[2];
-	double zrange[2]; 
-	/**
-   * is this a long edge plane in the xy  
-	 * dims would be 6 x 2 */
-	bool vertical; 
-	/**
-	 * is this an end cap, smaller 
-	 * dims are: 2 x 2 */
-	bool horizontal;
-	/**
-	 * coeffs of the ransac model that produced this */
-	double coeffs[4];
-	/**
-	 * the distance of this surface from the centroid (supossedly) */
-	double radius;
-
-	/**
-	 * as far as we can deduce, should the normal be positive or negatively signed
-	 */
-	float normalSign;
-	
-	/**
-	 * the 2d convex hull defining this face*/
-	pcl::PointCloud<pcl::PointXYZ>  cloud_hull;
-	
-};
 
 #include "binfile.h"
 
@@ -90,17 +61,20 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec);
 
 int main (int argc, char** argv){
-	
-	if(argc < 3) {
+	if(argc < 4) {
 		std::cerr << "# fits planes to a cluster file " << std::endl;
-		std::cerr << "# run with <binfile.path> <outpath>" << std::endl;
+		std::cerr << "# run with <binfile.path> <outpath> <index>" << std::endl;
 		return EXIT_FAILURE;
 	}
 	
 	std::string filepath = std::string(argv[1]); 
 	std::string outpath = std::string(argv[2]); 
-	std::cerr << "# processing: " << filepath << std::endl;
-	std::cerr << "# outputto: " << outpath << std::endl;
+	int run_index = std::atoi(argv[3]);
+
+	std::cerr << "# reading: " << filepath << std::endl;
+	std::cerr << "# intermediate files output path: " << outpath << std::endl;
+	std::cerr << "# index: " << run_index << std::endl;
+
 
 #ifdef READCBIN
 	// useful if you're suffering from os-x stringy/boost failures
@@ -110,8 +84,8 @@ int main (int argc, char** argv){
 	pcl::io::loadPCDFile(filepath, *cloud);
 #endif
 
-	std::cerr << "# read width: " << cloud->width << std::endl;
-	std::cerr << "# read height: " << cloud->height << std::endl;
+	std::cerr << "# cloud read width: " << cloud->width;
+	std::cerr << " height: " << cloud->height << std::endl;
 
 	std::vector<struct planeInfo> planesVec;
 
@@ -147,7 +121,17 @@ int main (int argc, char** argv){
 
 
 	// cout the results
-	std::cout << centroid << " " << angle << std::endl;
+	std::cout << run_index << "  " << centroid.x << " " << centroid.y << " " << centroid.z  << " " << angle << std::endl;
+
+	// now append them to file
+	boost::filesystem::path outPathFull(outpath); // append the result string to the outpath correctly
+	outPathFull /= "centroids_fit.dat";
+	std::ofstream outfile;
+	// open file, for output, in append mode
+	outfile.open(outPathFull.c_str(), std::ios::out | std::ios::app);
+	outfile << run_index << "  " << centroid.x << " " << centroid.y << " " << centroid.z  << " " << angle << std::endl;
+	outfile.close();
+	
 
 	return EXIT_SUCCESS;
 }
@@ -173,11 +157,16 @@ pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planesVec){
 	pcl::PointXYZ centroid;
 
 	if(nplanes < 2){
-		std::cerr << "# not enough planes to be totally sure" << std::endl;
-		// returns  a guess
+		/**
+		 * should output some info to an error file here, incase someone wants to revist the fucked up planes
+		 */
+		std::cerr << "# not enough planes to be totally sure, picked positive normal" << std::endl;
+		// returns  a guess, we picked the normals to be +ve (?)
 		centroid.x = planesVec[0].center.x - planesVec[0].radius * planesVec[0].normal.x;
 		centroid.y = planesVec[0].center.y - planesVec[0].radius * planesVec[0].normal.y;
 		centroid.z = planesVec[0].center.z - planesVec[0].radius * planesVec[0].normal.z;
+		// might as well give the sign, so we can guess an angle too
+		planesVec[0].normalSign = 1;
 		return centroid;
 	} 
 
@@ -225,7 +214,9 @@ pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planesVec){
 					planesVec[j].normalSign = (float)radiusCombinations[count][1];
 					delete p1;
 					delete p2;
+					#ifdef DEBUG
 					std::cerr << "# won count: " << count << std::endl;
+					#endif
 					break;
 				}
 				delete p1;
@@ -250,7 +241,7 @@ pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planesVec){
 	centroid.y /= (float)centTryVec.size();
 	centroid.z /= (float)centTryVec.size();
 
-	std::cout << "# centroid: " << centroid << std::endl;
+	std::cout << "# <centroid>: " << centroid << std::endl;
 
 	#ifdef DEBUG
 	std::cerr << "# normal signs: ";
@@ -299,6 +290,9 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 			//std::cerr << "# " << planesVec[i].normalSign << std::endl;
 			//std::cerr << "# " << zTemp << " " << xTemp << " " << angleTemp << std::endl;
 			angleVec.push_back(angleTemp);
+		} else if(planesVec[i].horizontal){
+			// try to do a horiz angle
+			angleVec.push_back(computeAngleHoriz(centroid, planesVec));
 		}
 	}
 
@@ -356,12 +350,7 @@ float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> pl
 	float z2, x2;
 	int meanCount = 0;
 
-	float dx, dz;
-
-
 	for(int i = 0; i < nplanes; i++){
-
-		
 		if(planesVec[i].horizontal){
 
 			z1 = planesVec[i].cloud_hull[0].z;
@@ -369,9 +358,6 @@ float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> pl
 
 			z2 = planesVec[i].cloud_hull[1].z;
 			x2 = planesVec[i].cloud_hull[1].x;
-
-			//zTemp = planesVec[i].zrange[1];
-			//xTemp = planesVec[i].xrange[1];
 
 			#ifdef DEBUG
 			std::cerr << "p1: " << x1 << ", " << z1  << std::endl;
@@ -402,14 +388,13 @@ float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> pl
 		meanCount++;
 	}
 
-	//std::cerr << "# angle final: " << angleTemp << std::endl;
-
 	angleFinal /= (double)(meanCount);
 
+	#ifdef DEBUG
 	std::cerr << "# angle final: " << angleFinal << std::endl;
+	#endif
 	
 	return(angleFinal);
-	
 }
 
 
@@ -420,6 +405,8 @@ float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> pl
 std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string outpath){
 	float distThreshGuess = 0.001; 
 	float cutOffTiny = 9E-3; // how small a dx is small enough to ignore?
+	int sizeMin = 0;
+	int inlierCutOff = 40;
 																	 
 	struct planeInfo *tempPlane;
 	std::vector<struct planeInfo> planeInfoVec;
@@ -459,13 +446,13 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 
 	int i = 0; //nr_points = (int) cloudWorking->points.size ();
   // While 10% of the original cloud is still there
-  while (cloudWorking->points.size () > 0)
+  while (cloudWorking->points.size () > sizeMin)
   {
     // Segment the largest planar component from the remaining cloud
 		seg.setInputCloud (cloudWorking);
 		seg.segment (*inliers, *coefficients);
 
-    if (inliers->indices.size () == 0)
+    if (inliers->indices.size () < inlierCutOff)
     {
       std::cerr << "Could not estimate a planar model for the given dataset." << std::endl;
       break;
@@ -498,7 +485,7 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
     extract.setNegative (false);
     extract.filter (*cloudPlane);
 
-    std::cerr << "# PointCloud representing the planar component: " << cloudPlane->width * cloudPlane->height << " data points." << std::endl;
+    std::cerr << "# planar PointCloud: " << cloudPlane->width * cloudPlane->height << " data points." << std::endl;
 
 		#ifdef DEBUGPROJ
 		// before projection
@@ -516,10 +503,11 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		proj.setInputCloud (cloudPlane);
 		proj.setModelCoefficients (coefficients);
 		proj.filter (*cloudProjected);
+
+    #ifdef DEBUGPROJ
 		std::cerr << "# PointCloud after projection has: "
 							<< cloudProjected->points.size () << " data points." << std::endl;
-
-		#ifdef DEBUGPROJ
+		
 		// for each plane we want to find the extents in x, y, z
 		std::cerr << "Cloud after projection: " << std::endl;
 		for (size_t index = 0; index < 10; ++index)
@@ -538,14 +526,18 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		chull.setInputCloud (cloudProjected);
 		//chull.setComputeAreaVolume(true);
 
+		#ifdef DEBUG
 		std::cerr << "# chull reconstruction starting\n";
+		#endif
 
 		chull.reconstruct (*cloud_hull);
 
+		#ifdef DEBUG
 		std::cerr << "# chull reconstruction done\n";
+		#endif
 		
-		std::cerr << "# chull dim: " << chull.getDim() << std::endl;
-		std::cerr << "# chull npts: " << cloud_hull->points.size() << std::endl;
+		std::cerr << "# chull dim: " << chull.getDim();
+		std::cerr << " npts: " << cloud_hull->points.size() << std::endl;
 
 		float xmin = bigValue, xmax = -bigValue, ymin = bigValue, ymax= -bigValue, zmin = bigValue , zmax = -bigValue;
 
@@ -624,12 +616,16 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 			tempPlane->horizontal = false; 
 			tempPlane->vertical = true;
 			tempPlane->radius = cubeShortSide / 2.0;
+			#ifdef DEBUG
 			std::cerr << "# vertical\n";
+			#endif
 		} else if( dy < cutOffTiny && dy < dx && dy < dz ){
 			tempPlane->horizontal = true;
 			tempPlane->vertical = false;
 			tempPlane->radius = cubeLongSide / 2.0;
+			#ifdef DEBUG
 			std::cerr << "# horizontal\n";
+			#endif
 		} else {
 			tempPlane->horizontal = false;
 			tempPlane->vertical = false;

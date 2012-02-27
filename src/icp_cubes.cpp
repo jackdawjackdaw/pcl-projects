@@ -10,6 +10,7 @@
 #include <pcl/point_types.h>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/icp_nl.h>
+#include <pcl/common.h>
 
 // for safe path stuff
 #include <boost/filesystem.hpp>
@@ -35,6 +36,7 @@ int main (int argc, char** argv){
 	if(argc < 3) {
 		std::cerr << "# computes transform to rotate a generic cube to a clustered cube " << std::endl;
 		std::cerr << "# run with <inputcube..path> <outpath> <id>" << std::endl;
+		return EXIT_FAILURE;
 	}
 	
 	std::string filepath = std::string(argv[1]); 
@@ -51,16 +53,20 @@ int main (int argc, char** argv){
 
 	pcl::io::loadPCDFile(filepath, *cloud);
 
-	std::cerr << "# read width: " << cloud->width << std::endl;
-	std::cerr << "# read height: " << cloud->height << std::endl;
+	std::cerr << "# read width: " << cloud->width;
+	std::cerr << " height: " << cloud->height << std::endl;
 
+	#ifdef DEBUG
 	std::cerr << "# generating cubeCloud" << std::endl;
+	#endif
 	// low res
 	cubeCloud = genTestCube(nShortSideLowRes,nLongSideLowRes); // gen our comparison cube
 	// higher res
 	//cubeCloud = genTestCube(nShortSideHighRes,nLongSideHighRes); // gen our comparison cube
-	
+
+	#ifdef DEBUG
 	std::cerr << "# starting icp" << std::endl;
+	#endif
 	pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
   icp.setInputCloud(cubeCloud);
   icp.setInputTarget(cloud);
@@ -70,9 +76,13 @@ int main (int argc, char** argv){
 	//icp.setMaxCorrespondenceDistance(0.01);
 
   icp.align(*Final);
+
+#ifdef DEBUG
   std::cout << "has converged:" << icp.hasConverged() << " score: " <<
   icp.getFitnessScore() << std::endl;
   std::cout << icp.getFinalTransformation() << std::endl;
+#endif
+
 	std::stringstream ss;
 	
 	ss << "fitted_cube_" << id << ".pcd";
@@ -93,7 +103,28 @@ int main (int argc, char** argv){
 	file.open(outPath.c_str());
 	file << icp.getFinalTransformation() << std::endl;
 	file.close();
+
+	// append to the centroids file 
+	ss.clear();
+	ss.str("");
+	ss << "centroids_icp.dat";
+	outPath.clear();
+	outPath /= outpath; 
+	outPath /= ss.str();
+	file.open(outPath.c_str(), std::ios::app | std::ios:out);
+
+	// get the transmat
+	Eigen::Matrix4f transMat = icp.getFinalTransformation();
 	
+	// write out the id, 
+	file << id; 
+	// the centroid (first 3 elts of final col)
+	file << transMat(0, 3) << " " << transMat(1, 3) << " " << transMat(2,3);
+	// the y rotation which should be (1,1) ? 
+	file << transMat(1,1) << std::endl;
+
+	file.close();
+
 	return EXIT_SUCCESS;
 }
 

@@ -11,11 +11,13 @@ set(CMAKE_CXX_COMPILER g++)
 MESSAGE("C Compiler: ${CMAKE_C_COMPILER}")
 MESSAGE("C++ Compiler: ${CMAKE_CXX_COMPILER}")
 
+## debug flags  
+set(CMAKE_CXX_FLAGS_DEBUG "-Wall -O0 -g -pg -DDEBUG")
+## production flags
+set(CMAKE_CXX_FLAGS_RELEASE "-Wall -O2")
 
-## debug flags on 
-set(CMAKE_CXX_FLAGS "-Wall -O0 -g -DDEBUG")
-
-message("cmake c++ flags: ${CMAKE_CXX_FLAGS}")
+message("debug cmake c++ flags: ${CMAKE_CXX_FLAGS_DEBUG}")
+message("release cmake c++ flags: ${CMAKE_CXX_FLAGS_RELEASE}")
 
 message("boost include: ${Boost_INCLUDE_DIRS}")
 message("boost lib: ${Boost_LIBRARY_DIRS}")
