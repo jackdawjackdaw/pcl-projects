@@ -56,9 +56,9 @@ int main (int argc, char** argv){
 
 	std::cerr << "# generating cubeCloud" << std::endl;
 	// low res
-	cubeCloud = genTestCube(9,27); // gen our comparison cube
+	cubeCloud = genTestCube(nShortSideLowRes,nLongSideLowRes); // gen our comparison cube
 	// higher res
-	//cubeCloud = genTestCube(18,54); // gen our comparison cube
+	//cubeCloud = genTestCube(nShortSideHighRes,nLongSideHighRes); // gen our comparison cube
 	
 	std::cerr << "# starting icp" << std::endl;
 	pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
@@ -96,9 +96,6 @@ int main (int argc, char** argv){
 	
 	return EXIT_SUCCESS;
 }
-
-
-pcl
 
 
 /**

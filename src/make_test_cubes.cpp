@@ -24,7 +24,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr genTestCube(int npointsShortSide, int npoint
 
 
 /**
- * ccs, cec24phy.duke.edu
+ * ccs, 
  * 
  * make a test cube, and apply a series of 6 rotations to it, saving
  * each cube into the folder outpath. We only need to rotate up to pi/2 because
@@ -64,14 +64,14 @@ int main (int argc, char** argv){
 		std::cerr << sideArray[i] << " ";
 	std::cerr << std::endl;
 	
-	cubeCloud = genTestCube(9, 27, sideArray);
+	cubeCloud = genTestCube( nShortSideLowRes, nLongSideLowRes, sideArray);
 
 	rotateAndOutputCube(outpath, "full-cube", cubeCloud);
 
 	// now we'll repeat without the horizontal endcaps
 	sideArray[0] = 0;
 	sideArray[1] = 0;
-	cubeCloud = genTestCube(9, 27, sideArray);
+	cubeCloud = genTestCube( nShortSideLowRes, nLongSideLowRes, sideArray);
 	rotateAndOutputCube(outpath, "no-horizontals", cubeCloud);
 
 	// reset the cubeCloud?
@@ -84,7 +84,7 @@ int main (int argc, char** argv){
 	sideArray[3] = 0;
 	sideArray[4] = 0;
 	sideArray[5] = 0;
-	cubeCloud = genTestCube(9, 27, sideArray);
+	cubeCloud = genTestCube(nShortSideLowRes, nLongSideLowRes, sideArray);
 	rotateAndOutputCube(outpath, "no-verticals", cubeCloud);
 
 	cubeCloud->clear();
@@ -97,7 +97,7 @@ int main (int argc, char** argv){
 	sideArray[3] = 1;
 	sideArray[4] = 0;
 	sideArray[5] = 1;
-	cubeCloud = genTestCube(9, 27, sideArray);
+	cubeCloud = genTestCube(nShortSideLowRes, nLongSideLowRes, sideArray);
 	rotateAndOutputCube(outpath, "mixed-cube", cubeCloud);
 
 	

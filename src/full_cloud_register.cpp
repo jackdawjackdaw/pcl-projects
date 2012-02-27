@@ -17,10 +17,15 @@
 
 std::vector<boost::filesystem::path>* findFilesInPath(std::string pathString, std::string extString);
 
+
 /**
+ * ccs,
+ *
  * read all the pcd files in  
  * directory, merge them together using icp output to 
  * the given combined name
+ * 
+ * no idea if this works....
  */
 int main (int argc, char** argv){
 	if(argc < 2){

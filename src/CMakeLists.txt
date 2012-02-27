@@ -58,11 +58,5 @@ target_link_libraries (icpcubes ${PCL_LIBRARIES})
 add_executable (full_cloud_register full_cloud_register.cpp binfile.cpp)
 target_link_libraries (full_cloud_register ${PCL_LIBRARIES})							 
 
-add_executable (test_io test_io.cpp)
-target_link_libraries (test_io ${PCL_LIBRARIES})
-
-add_executable (features features.cpp)
-target_link_libraries (features  ${PCL_LIBRARIES})
-
 add_executable (make_test_cubes make_test_cubes.cpp)
 target_link_libraries (make_test_cubes  ${PCL_LIBRARIES})
