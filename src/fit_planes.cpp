@@ -346,41 +346,67 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec){
 	int nplanes = planesVec.size();
 	std::vector<float> angleVec;
+	float cubeShortSide = 0.02;
+
 	float angleTemp = 0.0;
-	float zTemp, xTemp;
+	float angleFinal = 0.0;
+	float z1, x1;
+	float z2, x2;
+	int meanCount = 0;
+
+	float dx, dz;
+
 
 	for(int i = 0; i < nplanes; i++){
-		if(planesVec[i].horizontal){
-			// just need to find one point on the edge
-			// this is presumably the point x = xmax, z = zmax?
-			// we really need to test this
-			zTemp = planesVec[i].cloud_hull[0].z;
-			xTemp = planesVec[i].cloud_hull[0].x;
 
-			angleTemp = atan2(zTemp, xTemp);
+		
+		if(planesVec[i].horizontal){
+
+			z1 = planesVec[i].cloud_hull[0].z;
+			x1 = planesVec[i].cloud_hull[0].x;
+
+			z2 = planesVec[i].cloud_hull[1].z;
+			x2 = planesVec[i].cloud_hull[1].x;
+
+			//zTemp = planesVec[i].zrange[1];
+			//xTemp = planesVec[i].xrange[1];
+
+			#ifdef DEBUG
+			std::cerr << "p1: " << x1 << ", " << z1  << std::endl;
+			std::cerr << "p2: " << x2  << ", " << z2 <<  std::endl;
+			#endif
+			
+			angleTemp =  atan( (x1-x2) / (z1-z2) );
 			angleVec.push_back(angleTemp);
 		}
 	}
 	
 	if(angleVec.size() == 0){
-		throw 1;
+		return 0;
 	}
 	
 	for(int i = 0; i < angleVec.size(); i++){
+		angleTemp = angleVec[i];
+ 
 		#ifdef DEBUG
-		std::cerr << "# " << fabs(fmod(angleVec[i], M_PI/2)) << std::endl;
+		std::cerr << "# " << angleTemp  << std::endl;
 		#endif
+		
+		if(angleTemp < -0.01){
+			angleTemp = 2*M_PI + angleTemp;
+		}
 		// we'll just look at the angle mod PI
-		angleTemp += fabs(fmod(angleVec[i], M_PI/2));
+		angleFinal += (fmod(angleTemp, M_PI/2));
+		meanCount++;
 	}
 
 	//std::cerr << "# angle final: " << angleTemp << std::endl;
 
-	angleTemp /= (double)(angleVec.size());
+	angleFinal /= (double)(meanCount);
 
-	//std::cerr << "# angle final: " << angleTemp << std::endl;
+	std::cerr << "# angle final: " << angleFinal << std::endl;
 	
-	return(angleTemp);
+	return(angleFinal);
 	
 }
 
