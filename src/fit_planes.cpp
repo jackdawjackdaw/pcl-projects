@@ -129,7 +129,23 @@ int main (int argc, char** argv){
 	
 	int errflag = 0;
 	centroid = guessCentroid(planesVec, errflag);
+
+	if(errflag == returnNANCentroid){ // bail
+		Eigen::Vector4f centroid;
+		pcl::compute3DCentroid(*cloud, centroid);
+		float angle = 0.0;
+
+		boost::filesystem::path outPathFull(outpath); // append the result string to the outpath correctly
+		outPathFull /= "centroids_fit.dat";
+		std::ofstream outfile;
+		// open file, for output, in append mode
+		outfile.open(outPathFull.c_str(), std::ios::out | std::ios::app);
+		outfile << run_index << "  " << centroid[0] << " " << centroid[1] << " " << centroid[2]  << " " << angle << std::endl;
+		outfile.close();
+		return returnNANCentroid;
+	}		
 	
+	// try and compute the angle
 	float angle = 0.0;
 	
 	try{
@@ -264,6 +280,15 @@ pcl::PointXYZ guessCentroid(std::vector<struct planeInfo> &planesVec, int &errfl
 	centroid.y = 0;
 	centroid.z = 0;
 
+
+	if(centTryVec.size() == 0){
+		// didn't work, just do a simple guess using PCA
+		std::cerr << "# centroid guessing with planes/normals failed" << std::endl;
+		errflag = returnNANCentroid;
+		return centroid;
+	}
+		
+	
 
 	std::cerr << "# final centroid candidates:\n";
 	for(int i = 0; i < centTryVec.size(); i++){ // compute the centre of mass (avg) centroid
@@ -456,6 +481,8 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 	// how much do the normals have to project into either the vertical or horizonal 
 	// directions to count this as a vertical or a horizontal plane?
 	const float projCutOff = 0.9;
+	// none of the range (min,max) values should be bigger than this
+	const float saneRangeMax = 5.0; 
 	int sizeMin = 0;
 	int inlierCutOff = 40;
 																	 
@@ -568,8 +595,6 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		#endif
 
 		
-		// how can we do this?
-		// 
 		// Create a Convex Hull representation of the projected inliers
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull (new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::ConvexHull<pcl::PointXYZ> chull;
@@ -584,28 +609,14 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 
 		float xmin = bigValue, xmax = -bigValue, ymin = bigValue, ymax= -bigValue, zmin = bigValue , zmax = -bigValue;
 
-		// should be using pcl::GetMinMax3d here instead
-
-		// do a stupid search in the convex hull, this is not going to be many points
-		// so we can extract min and max values (i hope)
-		for(int index = 0; index < cloud_hull->points.size(); index++){
-			if(cloud_hull->points[index].x > xmax){
-				xmax = cloud_hull->points[index].x;
-			} else if (cloud_hull->points[index].x < xmin){
-				xmin = cloud_hull->points[index].x;
-			}
-			if(cloud_hull->points[index].y > ymax){
-				ymax = cloud_hull->points[index].y;
-			} else if (cloud_hull->points[index].y < ymin){
-				ymin = cloud_hull->points[index].y;
-			}
-			if(cloud_hull->points[index].z > zmax){
-				zmax = cloud_hull->points[index].z;
-			} else if (cloud_hull->points[index].z < zmin){
-				zmin = cloud_hull->points[index].z;
-			}
-
-		}
+		pcl::PointXYZ minPt, maxPt;
+		pcl::getMinMax3D(*cloud_hull, minPt, maxPt);
+		xmin = minPt.x;
+		xmax = maxPt.x;
+		ymin = minPt.y;
+		ymax = maxPt.y;
+		zmin = minPt.z;
+		zmax = maxPt.z;
 
 		tempPlane->cloud_hull = *cloud_hull;
 
@@ -733,14 +744,17 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 
 	// finally, we go through and check dims of each vertical plane, if there's one thats
 	// very small in the y direction we'll assign its y center to that of its brothers that are ok
+	// 
+	// this won't work when ALL the planes are partial, so yeah should check for that
 	double dy;
 	int *badCents = new int[nplanes]; // (if 0 then this plane has a good cent, otherwise -1)
 	float goodCentYV = 0.0;
 	int goodCentCount = 0;
+	float badLengthPercent = 0.2;
 	for(int i = 0; i < nplanes; i++){
 		if(planeInfoVec[i].vertical){
 			dy = planeInfoVec[i].yrange[1] - planeInfoVec[i].yrange[0];
-			if(fabs(dy - cubeLongSide)/cubeLongSide > 1E-1){ // more than 10% off but it IS a vertical side
+			if(fabs(dy - cubeLongSide)/cubeLongSide > badLengthPercent){ // more than 10% off but it IS a vertical side
 				badCents[i] = 1;
 				std::cerr << "# bad cent index: " << i << " dy: " << dy << std::endl;
 			} else {
@@ -755,13 +769,14 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 	if(goodCentCount > 0){
 		goodCentYV /= (float)(goodCentCount);
 		std::cerr << "# good cent value: " << goodCentYV << std::endl;
-
 	// 2nd pass, now correct the planes with the bad Y-cents
 		for(int i = 0; i < nplanes; i++){
 			if(badCents[i] == 1){
 				planeInfoVec[i].center.y = goodCentYV;
 			}
 		}
+	} else {
+		std::cerr << "# no good partial planes" << std::endl;
 	}
 		
 
