@@ -44,19 +44,20 @@ work flow:
 
 file summary:
 ------
-pcd_write -> converts input binfile containing xyz locations of voxels into a pcd file this forms the		
+
+###pcd_write -> converts input binfile containing xyz locations of voxels into a pcd file this forms the		
 basis for the rest of the analysis, the pcd file can be set to binary by defining PCDWRITEBINFILE.
 input file is expected to be: <int> npoints, <int> height, <int> width, npoints*{float x float y float z}.
 							
-cluster_extract -> reads a pcdfile and an outpath, pulls out euclidean clusters. Clusters are output to outpath. A text file with centroid guesses computed by: pcl::compute3DCentroid is created.
+###cluster_extract -> reads a pcdfile and an outpath, pulls out euclidean clusters. Clusters are output to outpath. A text file with centroid guesses computed by: pcl::compute3DCentroid is created.
 				
-fit_planes -> fits planar models to an extracted cluster, planes are saved to file (for debugging), normals and centroid for the cube or whatever we have of it are extracted. The y rotation mod M_PI is also extracted.
+##fit_planes -> fits planar models to an extracted cluster, planes are saved to file (for debugging), normals and centroid for the cube or whatever we have of it are extracted. The y rotation mod M_PI is also extracted.
 				
-pcd2bin -> convert a pcd file to a simple bin file which can be read using the binfile.h routines, useful if you're suffering from boost string problems on os-x 
+###pcd2bin -> convert a pcd file to a simple bin file which can be read using the binfile.h routines, useful if you're suffering from boost string problems on os-x 
 bin2pcd -> convert a bin file back to a pcd file.
 
-icpcubes -> make a test cube, use icp to register this cube with a supplied cluster file, outputs the 
+###icpcubes -> make a test cube, use icp to register this cube with a supplied cluster file, outputs the 
 registered test cube and the transformation matrix (in ascii)
 				
-make_test_cubes -> creates a set of test (partial) cubes and applies rotations around the y axis, 
+###make_test_cubes -> creates a set of test (partial) cubes and applies rotations around the y axis, 
 useful to test fit_planes and icpcubes
