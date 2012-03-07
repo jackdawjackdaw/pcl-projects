@@ -31,6 +31,8 @@
 // defines a plane, used a lot here
 #include "planeinfo.h"
 
+#define DEBUG
+
 /**
  * ccs, cec24@phy.duke.edu
  * fit_planes.cpp -> extract centroids and y-axis angles
@@ -440,6 +442,9 @@ float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> pl
 std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPtr, std::string outpath){
 	float distThreshGuess = 0.001; 
 	float cutOffTiny = 9E-3; // how small a dx is small enough to ignore?
+	// how much do the normals have to project into either the vertical or horizonal 
+	// directions to count this as a vertical or a horizontal plane?
+	const float projCutOff = 0.9;
 	int sizeMin = 0;
 	int inlierCutOff = 40;
 																	 
@@ -642,31 +647,34 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		std::cerr << "# centZ: " << centZ << std::endl;
 		#endif
 		
-		// finally we should determine if its a vertical or horizontal plane
-		// if its vertical then the area should be 2 x 6, and the face will be in either the
-		// xy || zy planes the radius is cubeShortSide / 2
-		// if its a horizontal plane then it has to be in the xz plane
-		// then the radius is cubeLongSide /2 
-		if(dy > cutOffTiny && dy > dx && dy > dz){
-			tempPlane->horizontal = false; 
+
+		// this is a pretty crappy method. what if we dot the normals into e_x, e_y, e_z
+		float projVertNorm = 0.0;
+		float projHorizNorm = 0.0;
+
+		// how much is projected into the vertical direction
+		projVertNorm = tempPlane->normal.x + tempPlane->normal.z;
+		// how much is projected into the horizonal plane
+		projHorizNorm = tempPlane->normal.y;
+		
+		#ifdef DEBUG
+		std::cerr << "# projVertNorm: " << projVertNorm; 
+		std::cerr << " projHorizNorm: " << projHorizNorm << std::endl;
+		#endif DEBUG
+
+		if(std::fabs(projVertNorm) >= projCutOff && std::fabs(projHorizNorm) < projCutOff){
 			tempPlane->vertical = true;
+			tempPlane->horizontal = false;
 			tempPlane->radius = cubeShortSide / 2.0;
-			#ifdef DEBUG
-			std::cerr << "# vertical\n";
-			#endif
-		} else if( dy < cutOffTiny && dy < dx && dy < dz ){
-			tempPlane->horizontal = true;
+		} else if(std::fabs(projVertNorm) < projCutOff && std::fabs(projHorizNorm) >= projCutOff){
 			tempPlane->vertical = false;
+			tempPlane->horizontal = true;
 			tempPlane->radius = cubeLongSide / 2.0;
-			#ifdef DEBUG
-			std::cerr << "# horizontal\n";
-			#endif
 		} else {
 			tempPlane->horizontal = false;
 			tempPlane->vertical = false;
 			tempPlane->radius = 0.0;
 		}
-	
 
 		planeInfoVec.push_back(*tempPlane);
 		delete tempPlane;
@@ -704,6 +712,11 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		outPathFull /= ss.str();
 		std::cerr << "# writing file to: " << outPathFull.native() << std::endl;		
 		pcl::io::savePCDFileASCII(outPathFull.native(), *cloudPlane);
+
+		// reset the strings for the next plane
+		ss.clear();
+		ss.str("");
+		outPathFull.clear();
 #endif
 #endif
 
