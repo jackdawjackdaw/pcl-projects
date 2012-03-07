@@ -28,12 +28,17 @@ work flow:
 	 a cube. Each cloud is output as a pcd file, pcd_viewer is really useful for debugging. Clusters are indexed in the order they're pulled out of the original data set. This index is carried through for the rest of the analysis.
 
 4) run fitCubes.py, Args: <path_to_clusters> <path_to_output>. This will default to using fit_planes to extract the centroids and angles. Several ascii data files are created in the output path: 
-- centroids_fit.dat: each line is cluster_index, centroid.x, centroid.y, centroid.z, angle.
+
+* centroids_fit.dat: each line is cluster_index, centroid.x, centroid.y, centroid.z, angle.
 	angles are reported mod PI/2 (since we're dealing with cubes)
-- fitCubes-guesslist.txt, lists clusters which only had a single face, so the normals had to be guessed, centroid may be ok, but angle is likely to be off. Each line is: cluster_id, path_to_cluster_pcd_file
-- fitCubes-nanlist.txt, lists clusters which totally failed, it's worth using pcd-viewer to check these out. Each line is: cluster_id, path_to_cluster_pcd_file
-- fitCubes-recon-failed.txt, more failed clusters, these failed because the cluster sizes are too small for planar model fitting, each line: cluster_id, path_to_cluster_pcd_file
-- fitCubes-unknown.txt, clusters which failed for who knows why? each line: cluster_id, path_to_cluster_pcd_file, return val
+
+* fitCubes-guesslist.txt, lists clusters which only had a single face, so the normals had to be guessed, centroid may be ok, but angle is likely to be off. Each line is: cluster_id, path_to_cluster_pcd_file
+
+* fitCubes-nanlist.txt, lists clusters which totally failed, it's worth using pcd-viewer to check these out. Each line is: cluster_id, path_to_cluster_pcd_file
+
+* fitCubes-recon-failed.txt, more failed clusters, these failed because the cluster sizes are too small for planar model fitting, each line: cluster_id, path_to_cluster_pcd_file
+
+* fitCubes-unknown.txt, clusters which failed for who knows why? each line: cluster_id, path_to_cluster_pcd_file, return val
 
 5) run wireFinder, Args <path_to_centroids_fit.dat> <outpath> will output wirelist.txt a file which lists which clusters belong to which wires, each line: wire_id cluster_id
 
