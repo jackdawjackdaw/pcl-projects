@@ -40,7 +40,7 @@ work flow:
 
 * fitCubes-unknown.txt, clusters which failed for who knows why? each line: cluster_id, path_to_cluster_pcd_file, return val
 
-5) run wireFinder, Args <path_to_centroids_fit.dat> <outpath> will output wirelist.txt a file which lists which clusters belong to which wires, each line: wire_id cluster_id
+5) run wireFinder, Args <path_to_centroids_fit.dat> will output wire_list.txt a file which lists which clusters belong to which wires, each line: wire_id cluster_id centroid.x centroid.y centroid.z theta
 
 file summary:
 ------
