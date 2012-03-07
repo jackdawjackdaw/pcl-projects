@@ -64,13 +64,16 @@ index = 0
 nanNormalsList = []
 guessNormalsList = []
 unknownList = []
+noPlanesList = []
 
 ## return values for when things fuck up
 nanNormalsRet = 5
 guessNormalsRet = 6
+noPlanesPossibleRet = 7
 
 ## how many files to process before stopping (for debuggin)
 #nProcessStop = 256
+    
 
 for fileName in cubeFiles:
     runArgs= []
@@ -91,6 +94,9 @@ for fileName in cubeFiles:
         elif(e.returncode == guessNormalsRet): # this is a guessed normal
             print "# guess normals"
             guessNormalsList.append(runArgs)
+        elif(e.returncode == noPlanesPossibleRet): # we couldn't find any planes at all
+            print "# no planes"
+            noPlanesList.append(runArgs)
         else: 
             print "# unknown retcode: ", e.returncode
             runArgs.append(e.returncode)
@@ -102,26 +108,29 @@ for fileName in cubeFiles:
     #if(index > nProcessStop):
     #    break
 
-## 
+## dump info to files for later
+def dumpListToFile(outputList, outputFileName, Comment):
+    if len(outputList):
+        outFile = open(outputFileName, 'w')
+        outFile.write(Comment)
+        for line in outputList:
+            outFile.write(line[3] + " " + line[1])
+            if(len(line) == 5):
+                outFile.write(str(line[4]) + "\n")
+            else:
+                outFile.write("\n")
+        outFile.close()
+
 if(usingFitPlanes):
-## now print out the bad and guess info to log files
-    if len(nanNormalsList):
-        nanFile = open(os.path.join(outpath, "fitCubes-nanlist.txt"), 'w')
-        nanFile.write("# these clusters failed\n")
-        for line in nanNormalsList:
-            nanFile.write(line[3] +  " " + line[1] + "\n")
-        nanFile.close()
-
-    if len(guessNormalsList):
-        guessFile = open(os.path.join(outpath, "fitCubes-guesslist.txt"), 'w')
-        guessFile.write("# these clusters have apparently only 1 face\n")
-        for line in guessNormalsList:
-            guessFile.write(line[3] +  " " + line[1] + "\n")
-        guessFile.close()
-
-    if len(unknownList):
-        ukFile = open(os.path.join(outpath, "fitCubes-unknown.txt"), 'w')
-        ukFile.write("# these clusters wtf'd, 3rd col is retcode\n")
-        for line in unknownList:
-            ukFile.write(line[3] +  " " + line[1] + " " + str(line[4]) +  "\n")
-        ukFile.close()
+    dumpListToFile(nanNormalsList, 
+                   os.path.join(outpath, "fitCubes-nanlist.txt"), 
+                   "# these clusters failed\n")
+    dumpListToFile(guessNormalsList,
+                   os.path.join(outpath, "fitCubes-guesslist.txt"),
+                   "# these clusters have only 1 face\n")
+    dumpListToFile(unknownList, 
+                   os.path.join(outpath, "fitCubes-unknown.txt"),
+                   "# these clusters wtf'd, thrd col is retcode\n")
+    dumpListToFile(noPlanesList,
+                   os.path.join(outpath, "fitCubes-recon-failed.txt"),
+                   "# these clusters apparently are too small for recon\n")

@@ -31,7 +31,7 @@
 // defines a plane, used a lot here
 #include "planeinfo.h"
 
-#define DEBUG
+//#define DEBUG
 
 /**
  * ccs, cec24@phy.duke.edu
@@ -108,7 +108,6 @@ int main (int argc, char** argv){
 			std::cerr << " brokzen" << std::endl;
 		}
 	}
-	
 
 	if(planesVec.size() == 0){
 		// didn't find any planes, compute the com and dump that
@@ -124,9 +123,8 @@ int main (int argc, char** argv){
 		outfile << run_index << "  " << centroid[0] << " " << centroid[1] << " " << centroid[2]  << " " << angle << std::endl;
 		outfile.close();
 		return returnNoPlanes;
-
 	}
-	
+
 	pcl::PointXYZ centroid;
 	
 	int errflag = 0;
@@ -325,7 +323,7 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 			//angleTemp = atan2(zTemp, xTemp);
 			angleTemp = atan(xTemp/ zTemp);
 
-			if(std::fabs(angleTemp) < smallAngleCutOff){ // clamp small values to zero
+			if(std::fabs(angleTemp) < smallAngleCutOff || std::fabs(M_PI/2 - angleTemp) < smallAngleCutOff ){ // clamp small values to zero
 				angleTemp = 0.0;
 			}
 
@@ -412,7 +410,7 @@ float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> pl
 			#endif
 			
 			angleTemp =  atan( (x1-x2) / (z1-z2) );
-			if(std::fabs(angleTemp) < smallAngleCutOff){ // clamp very small angles to zero
+			if(std::fabs(angleTemp) < smallAngleCutOff || std::fabs(M_PI/2 - angleTemp) < smallAngleCutOff){ // clamp very small angles to zero
 				angleTemp = 0.0;
 			} 
 			angleVec.push_back(angleTemp);
