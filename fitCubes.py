@@ -14,12 +14,10 @@ runBin=""
 runBinICP= os.path.join(".", "build" , "src", "icpcubes")
 runBinFitPlanes = os.path.join(".", "build", "src", "fit_planes")
 
-if (len(sys.argv) < 4):
+if (len(sys.argv) < 3):
     print "# attempts to extract centroids and angles from all files in <inpath>"
     print "# output is written to <outpath>"
-    print "# binflag: 1 -> icp"
-    print "#        : else -> fitplanes"
-    print "# run with: <inpath> <outpath> <binFlag>"
+    print "# run with: <inpath> <outpath>"
     sys.exit(-1)
 
 
@@ -27,8 +25,9 @@ inpath = sys.argv[1]
 outpath = sys.argv[2]
 
 usingFitPlanes = 0
+useICP = 0 ## turn this on to use icp fitting
 
-if(sys.argv[3] == "1"):
+if(useICP == "1"):
     runBin = runBinICP
     print "# using icp " + runBin
 else:
