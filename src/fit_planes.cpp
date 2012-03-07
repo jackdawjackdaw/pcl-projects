@@ -132,7 +132,7 @@ int main (int argc, char** argv){
 	int errflag = 0;
 	centroid = guessCentroid(planesVec, errflag);
 	
-	float angle;
+	float angle = 0.0;
 	
 	try{
 		angle = computeAngle(centroid, planesVec);
@@ -312,6 +312,7 @@ float computeDistance(pcl::PointXYZ *p1, pcl::PointXYZ *p2){
 float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec){
 	int nplanes = planesVec.size();
 	std::vector<float> angleVec;
+	const float smallAngleCutOff = 1e-1; // angles less than this will be clamped to zero
 	float angleTemp = 0.0;
 	float angleFinal = 0.0;
 	float zTemp, xTemp;
@@ -323,9 +324,11 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 			xTemp = planesVec[i].normal.x * planesVec[i].normalSign;
 			//angleTemp = atan2(zTemp, xTemp);
 			angleTemp = atan(xTemp/ zTemp);
-			//std::cerr << "# " << planesVec[i].normal << std::endl;
-			//std::cerr << "# " << planesVec[i].normalSign << std::endl;
-			//std::cerr << "# " << zTemp << " " << xTemp << " " << angleTemp << std::endl;
+
+			if(std::fabs(angleTemp) < smallAngleCutOff){ // clamp small values to zero
+				angleTemp = 0.0;
+			}
+
 			angleVec.push_back(angleTemp);
 		} else if(planesVec[i].horizontal){
 			// try to do a horiz angle
@@ -345,18 +348,21 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 	#endif
 	for(int i = 0; i < angleVec.size(); i++){
 		#ifdef DEBUG
-		std::cerr << "# " << angleVec[i] << std::endl;
+		std::cerr << "# angleVec: " << angleVec[i] << std::endl;
 		#endif
 
 		angleTemp = angleVec[i];
 		if(!std::isnan(angleTemp)){
 			if(angleTemp < 0){
-				angleTemp =2 * M_PI + angleTemp;
+				angleTemp = 2 * M_PI + angleTemp;
 			} 
 
+		#ifdef DEBUG
+			std::cerr << "# angleTemp: (preMod) " << angleTemp << std::endl;
+		#endif
 			angleTemp = fmod(angleTemp, M_PI/2);
 		#ifdef DEBUG
-			std::cerr << "# " << angleTemp << std::endl;
+			std::cerr << "# angleTemp: " << angleTemp << std::endl;
 		#endif
 
 		// we'll just look at the angle mod PI
@@ -365,22 +371,26 @@ float computeAngle(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesV
 		}
 	}
 
-	//std::cerr << "# angle final: " << angleTemp << std::endl;
+	std::cerr << "# angle final: " << angleFinal << " meanCount: " <<  meanCount << std::endl;
 
 	angleFinal /= (double)(meanCount);
 
-	//std::cerr << "# angle final: " << angleTemp << std::endl;
+	std::cerr << "# angle final: " << angleFinal << std::endl;
 	
 	return(angleFinal);
 }
 
 /**
  * try and use the edges of the horizontal faces to extract an angle
+ *
+ * small angles are clamped to zero, this stops problems with averaging 
+ * say: 0, 2*PI - epsilon, epsilon, 0, which gives you 2PI/4 instead of ~ 0
+ * 
  */
 float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> planesVec){
 	int nplanes = planesVec.size();
 	std::vector<float> angleVec;
-
+	const float smallAngleCutOff = 1e-1; // angles less than this will be clamped to zero
 	float angleTemp = 0.0;
 	float angleFinal = 0.0;
 	float z1, x1;
@@ -402,6 +412,9 @@ float computeAngleHoriz(pcl::PointXYZ centroid, std::vector<struct planeInfo> pl
 			#endif
 			
 			angleTemp =  atan( (x1-x2) / (z1-z2) );
+			if(std::fabs(angleTemp) < smallAngleCutOff){ // clamp very small angles to zero
+				angleTemp = 0.0;
+			} 
 			angleVec.push_back(angleTemp);
 		}
 	}
@@ -494,11 +507,11 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 
     if (inliers->indices.size () < inlierCutOff)
     {
-      std::cerr << "Could not estimate a planar model for the given dataset." << std::endl;
+      std::cerr << "# Could not estimate a planar model for the given dataset." << std::endl;
       break;
     }
 
-		std::cerr << "Model coefficients: " << coefficients->values[0] << " " 
+		std::cerr << "# Model coefficients: " << coefficients->values[0] << " " 
 							<< coefficients->values[1] << " "
 							<< coefficients->values[2] << " " 
 							<< coefficients->values[3] << std::endl;
@@ -566,15 +579,7 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		chull.setInputCloud (cloudProjected);
 		//chull.setComputeAreaVolume(true);
 
-		#ifdef DEBUG
-		std::cerr << "# chull reconstruction starting\n";
-		#endif
-
 		chull.reconstruct (*cloud_hull);
-
-		#ifdef DEBUG
-		std::cerr << "# chull reconstruction done\n";
-		#endif
 		
 		std::cerr << "# chull dim: " << chull.getDim();
 		std::cerr << " npts: " << cloud_hull->points.size() << std::endl;
@@ -630,7 +635,6 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		tempPlane->zrange[0] = zmin;
 		tempPlane->zrange[1] = zmax;
 
-
 		// find the centre of this plane
 		centX = xmin + dx/2;
 		centY = ymin + dy/2;
@@ -640,20 +644,18 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		tempPlane->center.y = centY;
 		tempPlane->center.z = centZ;
 
-
 		#ifdef DEBUG
 		std::cerr << "# centX: " << centX << std::endl;
 		std::cerr << "# centY: " << centY << std::endl;
 		std::cerr << "# centZ: " << centZ << std::endl;
 		#endif
-		
 
-		// this is a pretty crappy method. what if we dot the normals into e_x, e_y, e_z
 		float projVertNorm = 0.0;
 		float projHorizNorm = 0.0;
-
-		// how much is projected into the vertical direction
-		projVertNorm = tempPlane->normal.x + tempPlane->normal.z;
+		
+		// note: we don't know sign of normals, so we project with |n| 
+		// how much is projected into the vertical direction 
+		projVertNorm = std::fabs(tempPlane->normal.x) + std::fabs(tempPlane->normal.z); // use fabs to make sure both norms contrib
 		// how much is projected into the horizonal plane
 		projHorizNorm = tempPlane->normal.y;
 		
@@ -680,7 +682,6 @@ std::vector<struct planeInfo> extractPlanes(pcl::PointCloud<pcl::PointXYZ>::Ptr 
 		delete tempPlane;
 
 		// save the planes to file, only in debug mode
-
 #ifdef DEBUG
 #ifdef WRITECBIN
 		// do the boost song and dance to write the data nicely
